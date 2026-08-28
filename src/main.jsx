@@ -100,8 +100,7 @@ function App(){
   const [saveState,setSaveState]=useState("저장됨");
   const [help,setHelp]=useState(()=>!load(STORAGE.help,false));
   const [cloudReady,setCloudReady]=useState(false);
-  const [editPin,setEditPin]=useState(()=>sessionStorage.getItem("rowoon_edit_pin")||"");
-  const [pinModal,setPinModal]=useState(false);
+  const editPin="public";
   const saveTimer=useRef(null);
 
   useEffect(()=>{
@@ -133,8 +132,7 @@ function App(){
     setSaveState("공용 저장 중...");
     saveTimer.current=setTimeout(async()=>{
       try{
-        const response=await fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json","x-edit-pin":editPin},body:JSON.stringify({items,weeks,records,incoming})});
-        if(response.status===401){sessionStorage.removeItem("rowoon_edit_pin");setEditPin("");setSaveState("수정 잠김");return}
+        const response=await fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({items,weeks,records,incoming})});
         if(!response.ok)throw new Error("save failed");
         setSaveState("공용 저장됨");
       }catch{setSaveState("저장 실패 · 다시 확인")}
@@ -286,16 +284,15 @@ function App(){
   }
   function printNow(){window.print()}
 
-  if(page==="items") return <><ItemPage items={items} editable={!!editPin} onUnlock={()=>setPinModal(true)} onBack={()=>setPage("weekly")} onAdd={()=>setModal({type:"item",data:null})}
+  if(page==="items") return <><ItemPage items={items} editable={true} onBack={()=>setPage("weekly")} onAdd={()=>setModal({type:"item",data:null})}
     onEdit={i=>setModal({type:"item",data:i})} onToggle={setItemActive} onDelete={deleteItem} onReorder={reorder}/>
-    {modal?.type==="item"&&<ItemModal data={modal.data} defaults={modal.defaults} onClose={()=>setModal(null)} onSave={modal.data?updateItem:addItem}/>} 
-    {pinModal&&<PinModal onClose={()=>setPinModal(false)} onSuccess={pin=>{sessionStorage.setItem("rowoon_edit_pin",pin);setEditPin(pin);setPinModal(false);setSaveState("수정 가능 · 공용 저장 준비")}}/>}</>;
+    {modal?.type==="item"&&<ItemModal data={modal.data} defaults={modal.defaults} onClose={()=>setModal(null)} onSave={modal.data?updateItem:addItem}/>}</>;
   if(page==="history") return <HistoryPage weeks={weeks} onBack={()=>setPage("weekly")} onOpen={s=>{setDate(s);setCalendarDate(s);setPage("weekly")}}/>;
 
   return <div className="app">
     <header className="topbar">
       <div className="brand"><div className="star">✦</div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 식자재 수불대장</div></div></div>
-      <div className="header-actions"><span className="save-state">● {saveState}</span><button className={editPin?"edit-unlocked":"edit-locked"} onClick={()=>editPin?lockEditing():setPinModal(true)}>{editPin?"🔓 수정 가능":"🔒 수정 잠금"}</button><button className="ghost" onClick={()=>setHelp(true)}>?</button><button className="ghost" onClick={()=>setPage("history")}>주간 기록</button><button className="ghost" onClick={()=>setPage("items")}>품목 관리</button></div>
+      <div className="header-actions"><span className="save-state">● {saveState}</span><button className="ghost" onClick={()=>setHelp(true)}>?</button><button className="ghost" onClick={()=>setPage("history")}>주간 기록</button><button className="ghost" onClick={()=>setPage("items")}>품목 관리</button></div>
     </header>
 
     <main className="container">
@@ -339,10 +336,7 @@ function App(){
 
     {modal?.type==="item"&&<ItemModal data={modal.data} defaults={modal.defaults} onClose={()=>setModal(null)} onSave={modal.data?updateItem:addItem}/>} 
     {help&&<Help onClose={()=>{setHelp(false);save(STORAGE.help,true)}}/>}
-    {pinModal&&<PinModal onClose={()=>setPinModal(false)} onSuccess={pin=>{sessionStorage.setItem("rowoon_edit_pin",pin);setEditPin(pin);setPinModal(false);setSaveState("수정 가능 · 공용 저장 준비")}}/>}
   </div>;
-
-  function lockEditing(){sessionStorage.removeItem("rowoon_edit_pin");setEditPin("");setSaveState("수정 잠김")}
 
   function shiftWeek(n){
     const d=parseLocal(week.start);d.setDate(d.getDate()+n*7);const targetStart=isoDate(d);

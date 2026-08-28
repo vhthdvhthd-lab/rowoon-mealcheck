@@ -5,16 +5,10 @@ function json(data, status = 200) {
   });
 }
 
-function authorized(request, env) {
-  const supplied = request.headers.get("x-edit-pin");
-  return Boolean(env.EDIT_PIN && supplied && env.EDIT_PIN === supplied);
-}
-
 async function handleApi(request, env) {
   const { pathname } = new URL(request.url);
   if (pathname === "/api/auth" && request.method === "POST") {
-    if (!env.EDIT_PIN) return json({ error: "EDIT_PIN이 설정되지 않았습니다." }, 503);
-    return authorized(request, env) ? json({ ok: true }) : json({ error: "비밀번호가 맞지 않습니다." }, 401);
+    return json({ ok: true });
   }
 
   if (pathname === "/api/state" && request.method === "GET") {
@@ -28,8 +22,6 @@ async function handleApi(request, env) {
   }
 
   if (pathname === "/api/state" && request.method === "PUT") {
-    if (!env.EDIT_PIN) return json({ error: "EDIT_PIN이 설정되지 않았습니다." }, 503);
-    if (!authorized(request, env)) return json({ error: "수정 권한이 없습니다." }, 401);
     if (!env.DB) return json({ error: "D1 데이터베이스가 연결되지 않았습니다." }, 503);
     try {
       const state = await request.json();
