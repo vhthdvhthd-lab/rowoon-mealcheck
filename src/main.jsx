@@ -102,6 +102,9 @@ function App(){
   const [cloudReady,setCloudReady]=useState(false);
   const editPin="public";
   const saveTimer=useRef(null);
+  const maxSaveTimer=useRef(null);
+  const latestCloudState=useRef(null);
+  const savingCloud=useRef(false);
 
   useEffect(()=>{
     let cancelled=false;
@@ -128,17 +131,32 @@ function App(){
   useEffect(()=>{
     save(STORAGE.items,items); save(STORAGE.weeks,weeks); save(STORAGE.records,records); save(STORAGE.incoming,incoming);
     if(!cloudReady||!editPin)return;
+    latestCloudState.current={items,weeks,records,incoming};
     clearTimeout(saveTimer.current);
-    setSaveState("공용 저장 중...");
-    saveTimer.current=setTimeout(async()=>{
-      try{
-        const response=await fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({items,weeks,records,incoming})});
-        if(!response.ok)throw new Error("save failed");
-        setSaveState("공용 저장됨");
-      }catch{setSaveState("저장 실패 · 다시 확인")}
-    },650);
-    return()=>clearTimeout(saveTimer.current);
+    setSaveState("변경 내용 대기 중...");
+    saveTimer.current=setTimeout(()=>flushCloudSave(),5000);
+    if(!maxSaveTimer.current)maxSaveTimer.current=setTimeout(()=>flushCloudSave(),30000);
   },[items,weeks,records,incoming,cloudReady,editPin]);
+
+  useEffect(()=>{
+    const saveBeforeLeave=()=>{if(latestCloudState.current)fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(latestCloudState.current),keepalive:true}).catch(()=>{})};
+    const onVisibility=()=>{if(document.visibilityState==="hidden")saveBeforeLeave()};
+    window.addEventListener("pagehide",saveBeforeLeave);document.addEventListener("visibilitychange",onVisibility);
+    return()=>{window.removeEventListener("pagehide",saveBeforeLeave);document.removeEventListener("visibilitychange",onVisibility)};
+  },[]);
+
+  async function flushCloudSave(){
+    if(!latestCloudState.current)return;
+    if(savingCloud.current){clearTimeout(maxSaveTimer.current);maxSaveTimer.current=setTimeout(()=>flushCloudSave(),1000);return}
+    clearTimeout(saveTimer.current);clearTimeout(maxSaveTimer.current);saveTimer.current=null;maxSaveTimer.current=null;
+    const snapshot=latestCloudState.current;latestCloudState.current=null;savingCloud.current=true;setSaveState("공용 저장 중...");
+    try{
+      const response=await fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(snapshot)});
+      if(!response.ok)throw new Error("save failed");
+      setSaveState("공용 저장됨");
+    }catch{latestCloudState.current=snapshot;setSaveState("저장 실패 · 인터넷 확인")}
+    finally{savingCloud.current=false;if(latestCloudState.current){clearTimeout(saveTimer.current);clearTimeout(maxSaveTimer.current);saveTimer.current=setTimeout(()=>flushCloudSave(),5000);maxSaveTimer.current=setTimeout(()=>flushCloudSave(),30000)}}
+  }
 
   const week=weekInfo(parseLocal(date));
   const activeItems=useMemo(()=>items.filter(i=>i.active).sort((a,b)=>a.sort_order-b.sort_order),[items]);
