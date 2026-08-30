@@ -277,6 +277,19 @@ function App(){
     const item={...data,id:uid(),active:true,sort_order:items.length,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
     setItems(prev=>{const next=[...prev,item];save(STORAGE.items,next);return next}); setModal(null);
   }
+  function addBlankItem(targetCategory=category){
+    setSearch("");
+    setFilter("전체");
+    const existing=items.find(i=>i.active!==false&&i.category===targetCategory&&!String(i.name||"").trim());
+    if(existing){ setSaveState("빈 품목명을 먼저 작성해주세요"); return; }
+    addItem({
+      name:"",
+      category:targetCategory,
+      unit:"",
+      storage_method:defaultStorageForCategory(targetCategory),
+      expiration_type:targetCategory==="야채·채소"?"납품일/소비기한":"유통기한"
+    });
+  }
   function updateItem(data){
     setItems(prev=>{const next=prev.map(i=>i.id===data.id?{...i,...data,updated_at:new Date().toISOString()}:i);save(STORAGE.items,next);return next});setModal(null);
   }
@@ -357,7 +370,7 @@ function App(){
 
   return <div className="app">
     <header className="topbar">
-      <div className="brand"><div className="star">✦</div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 식자재 수불대장</div></div></div>
+      <div className="brand"><div className="star"><img src="/rowoon-symbol.png" alt="로운 심벌"/></div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 식자재 수불대장</div></div></div>
       <div className="header-actions"><span className="save-state">● {saveState}</span><button className="ghost" onClick={()=>setHelp(true)}>?</button><button className="ghost" onClick={()=>setPage("history")}>주간 기록</button><button className="ghost" onClick={()=>setPage("items")}>품목 관리</button></div>
     </header>
 
@@ -385,7 +398,7 @@ function App(){
           <button className="today" onClick={()=>{setDate(isoDate(mondayOf(new Date())));setCalendarDate(isoDate(new Date()))}}>이번 주</button>
           <button onClick={()=>shiftWeek(1)}>다음 주 →</button>
           <button disabled={!editPin} onClick={copyLastWeek}>↻ 지난주 재고 불러오기</button>
-          <button disabled={!editPin} className="primary" onClick={()=>setModal({type:"item",data:null,defaults:{category}})}>＋ 품목 추가</button>
+          <button disabled={!editPin} className="primary" onClick={()=>addBlankItem(category)}>＋ 품목 추가</button>
         </div>
       </section>
 
@@ -394,7 +407,7 @@ function App(){
       <InventoryTable items={visible} records={records} incoming={incoming} week={week} patchRecord={patchRecord} patchItem={patchItem}
         getIncoming={getIncoming} totalIncoming={totalIncoming} patchIncoming={patchIncoming}
         expirationFor={expirationFor} expiryStatus={expiryStatus} effectiveStock={effectiveStock} onDelete={deleteItem} showCategory={filter==="기한 임박"} editable={!!editPin}
-        onAdd={()=>setModal({type:"item",data:null,defaults:{category}})}/>
+        onAdd={()=>addBlankItem(category)}/>
 
       <div className="print-logo"><img src="/rowoon-center-logo.png" alt="사회적협동조합 로운주간이용센터"/></div>
 
@@ -452,7 +465,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
       const r=records.find(x=>x.weekly_record_id===week.start&&x.item_id===item.id)||{};
       const ins=getIncoming(item.id), total=totalIncoming(item.id), st=effectiveStock(r), status=expiryStatus(expirationFor(item,r));
       return <tr key={item.id}>
-        <td className="sticky-col item-name"><b>{item.name}</b>{showCategory&&<span className="item-category-badge">{item.category}</span>}{ins.length>0&&<span className="mini-badge">입고 {ins.length}건</span>}</td>
+        <td className="sticky-col item-name"><input autoFocus={!item.name} disabled={!editable} className="item-name-input" aria-label={`${item.name||"새 품목"} 품목명 수정`} value={item.name} onChange={e=>patchItem(item.id,{name:e.target.value})}/>{showCategory&&<span className="item-category-badge">{item.category}</span>}{ins.length>0&&<span className="mini-badge">입고 {ins.length}건</span>}</td>
         <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="단위" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
         <td><input disabled={!editable} className="num" value={r.opening_stock??""} onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
         <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><DateFields disabled={!editable} label={`${item.name} 입고일자`} value={ins[0]?.incoming_date||""} onChange={value=>patchIncoming(item.id,{incoming_date:value})}/><span className="print-date">{ins[0]?.incoming_date?fmtDate(ins[0].incoming_date):""}</span></td>
@@ -498,14 +511,14 @@ function Modal({title,onClose,children}){return <div className="overlay"><div cl
 function ItemPage({items,editable,onUnlock,onBack,onAdd,onEdit,onToggle,onDelete,onReorder}){
   const [q,setQ]=useState(""),[cat,setCat]=useState("전체");
   const list=items.filter(i=>(cat==="전체"||i.category===cat)&&i.name.includes(q)).sort((a,b)=>a.sort_order-b.sort_order);
-  return <div className="app"><header className="topbar"><div className="brand"><div className="star">✦</div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">품목 관리</div></div></div><button className="ghost" onClick={onBack}>← 주간 수불대장</button></header>
+  return <div className="app"><header className="topbar"><div className="brand"><div className="star"><img src="/rowoon-symbol.png" alt="로운 심벌"/></div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">품목 관리</div></div></div><button className="ghost" onClick={onBack}>← 주간 수불대장</button></header>
   <main className="container"><div className="page-head"><div><h1>품목 관리</h1><p>품목은 한 번 등록하면 매주 자동으로 나타납니다.</p></div>{editable?<button className="primary" onClick={onAdd}>＋ 품목 추가</button>:<button className="edit-locked" onClick={onUnlock}>🔒 수정 잠금 해제</button>}</div>
   <div className="toolbar simple"><div className="search">⌕<input placeholder="품목 검색" value={q} onChange={e=>setQ(e.target.value)}/></div><div className="tabs">{["전체",...CATEGORIES].map(c=><button className={cat===c?"active":""} onClick={()=>setCat(c)} key={c}>{c}</button>)}</div></div>
   <div className="master-list">{list.map(i=><div className={`master-row ${i.active?"":"inactive-row"}`} key={i.id}><div className="order"><button disabled={!editable} title="위로" onClick={()=>onReorder(i.id,-1)}>↑</button><button disabled={!editable} title="아래로" onClick={()=>onReorder(i.id,1)}>↓</button></div><div className="master-name"><b>{i.name}</b><span>{i.category}</span></div><span className="master-unit">{i.unit||"단위 미입력"}</span><span>{i.storage_method}</span><span className={i.active?"status-on":"status-off"}>{i.active?"사용 중":"숨김"}</span><div className="master-actions"><button disabled={!editable} onClick={()=>onEdit(i)}>수정</button><button disabled={!editable} onClick={()=>onToggle(i.id,!i.active)}>{i.active?"숨기기":"다시 사용"}</button><button disabled={!editable} className="danger-text" onClick={()=>onDelete(i)}>삭제</button></div></div>)}{!list.length&&<div className="empty">조건에 맞는 품목이 없습니다.</div>}</div></main></div>
 }
 function HistoryPage({weeks,onBack,onOpen,onBackup,onRestore}){
   const list=[...weeks].sort((a,b)=>b.start.localeCompare(a.start)),fileRef=useRef(null);
-  return <div className="app"><header className="topbar"><div className="brand"><div className="star">✦</div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 기록</div></div></div><button className="ghost" onClick={onBack}>← 주간 수불대장</button></header><main className="container"><div className="page-head"><div><h1>주간 기록</h1><p>작성했던 주간 수불대장을 다시 열거나 전체 자료를 안전하게 백업할 수 있습니다.</p></div><div className="backup-actions"><button className="backup-save" onClick={onBackup}>⬇ 전체 백업 저장</button><button onClick={()=>fileRef.current?.click()}>↥ 백업 불러오기</button><input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={e=>{const file=e.target.files?.[0];if(file)onRestore(file);e.target.value=""}}/></div></div><div className="backup-guide">백업파일에는 품목, 입고수량, 사용량, 재고현황과 모든 주차 기록이 포함됩니다.</div><div className="history-list">{list.map(w=><button key={w.start} onClick={()=>onOpen(w.start)}><span>주간 수불대장</span><b>{fmtDate(w.start)} ~ {fmtDate(w.end)}</b><span>열기 →</span></button>)}{!list.length&&<div className="empty">아직 작성된 주간 기록이 없습니다.</div>}</div></main></div>
+  return <div className="app"><header className="topbar"><div className="brand"><div className="star"><img src="/rowoon-symbol.png" alt="로운 심벌"/></div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 기록</div></div></div><button className="ghost" onClick={onBack}>← 주간 수불대장</button></header><main className="container"><div className="page-head"><div><h1>주간 기록</h1><p>작성했던 주간 수불대장을 다시 열거나 전체 자료를 안전하게 백업할 수 있습니다.</p></div><div className="backup-actions"><button className="backup-save" onClick={onBackup}>⬇ 전체 백업 저장</button><button onClick={()=>fileRef.current?.click()}>↥ 백업 불러오기</button><input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={e=>{const file=e.target.files?.[0];if(file)onRestore(file);e.target.value=""}}/></div></div><div className="backup-guide">백업파일에는 품목, 입고수량, 사용량, 재고현황과 모든 주차 기록이 포함됩니다.</div><div className="history-list">{list.map(w=><button key={w.start} onClick={()=>onOpen(w.start)}><span>주간 수불대장</span><b>{fmtDate(w.start)} ~ {fmtDate(w.end)}</b><span>열기 →</span></button>)}{!list.length&&<div className="empty">아직 작성된 주간 기록이 없습니다.</div>}</div></main></div>
 }
 function Help({onClose}){return <div className="overlay"><div className="help modal"><div className="modal-head"><h2>처음 사용하시나요?</h2><button onClick={onClose}>×</button></div><ol><li>품목은 한 번만 등록하면 됩니다.</li><li>주차를 열면 월~금이 자동으로 계산됩니다.</li><li>지난주 재고현황이 이번 주 기초재고로 자동 이월됩니다.</li><li>입고와 월~금 사용량은 정수뿐 아니라 <b>0.5, 1/4, 1 1/4</b>처럼 소수와 분수로도 입력할 수 있습니다.</li><li>재고현황은 자동 계산되며 실제 재고와 다르면 직접 수정할 수 있습니다.</li><li>오른쪽 위 <b>인쇄 / PDF 저장</b>으로 A4 문서를 만들 수 있습니다.</li></ol><div className="modal-actions"><button className="primary" onClick={onClose}>확인</button></div></div></div>}
 
