@@ -15,6 +15,7 @@ const UNITS = ["kg","g","개","봉지","통","쪽","단","망","알","기타"];
 const STORAGE_METHODS = ["냉동","냉장","상온","기타"];
 const DAYS = ["monday","tuesday","wednesday","thursday","friday"];
 const DAY_LABELS = ["월","화","수","목","금"];
+const defaultStorageForCategory = category => category === "냉동식품" ? "냉동" : category === "부식자재" ? "상온" : "냉장";
 
 const initialItems = [
   ["떡갈비 1kg","냉동식품","봉지","냉동"],["떡갈비 1,200g","냉동식품","봉지","냉동"],
@@ -44,6 +45,28 @@ function load(key, fallback) {
 }
 function save(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 function uid(){return crypto.randomUUID();}
+function DateFields({value="",onChange,disabled=false,label="날짜"}){
+  const parts=String(value||"").split("-");
+  const [year,setYear]=useState(parts[0]||"");
+  const [month,setMonth]=useState(parts[1]||"");
+  const [day,setDay]=useState(parts[2]||"");
+  const monthRef=useRef(null),dayRef=useRef(null);
+  useEffect(()=>{const p=String(value||"").split("-");setYear(p[0]||"");setMonth(p[1]||"");setDay(p[2]||"")},[value]);
+  const update=(part,raw)=>{
+    const v=raw.replace(/\D/g,"");
+    let y=year,m=month,d=day;
+    if(part==="year"){y=v.slice(0,4);setYear(y);if(y.length===4)monthRef.current?.focus()}
+    if(part==="month"){m=v.slice(0,2);setMonth(m);if(m.length===2)dayRef.current?.focus()}
+    if(part==="day"){d=v.slice(0,2);setDay(d)}
+    if(y.length===4&&m.length===2&&d.length===2) onChange(`${y}-${m}-${d}`);
+    else if(!y&&!m&&!d) onChange("");
+  };
+  return <span className="date-parts screen-date" aria-label={label}>
+    <input disabled={disabled} inputMode="numeric" aria-label={`${label} 연도`} value={year} maxLength={4} onChange={e=>update("year",e.target.value)}/><i>-</i>
+    <input ref={monthRef} disabled={disabled} inputMode="numeric" aria-label={`${label} 월`} value={month} maxLength={2} onChange={e=>update("month",e.target.value)}/><i>-</i>
+    <input ref={dayRef} disabled={disabled} inputMode="numeric" aria-label={`${label} 일`} value={day} maxLength={2} onChange={e=>update("day",e.target.value)}/>
+  </span>;
+}
 function isoDate(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
@@ -431,7 +454,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
         <td className="sticky-col item-name"><b>{item.name}</b>{showCategory&&<span className="item-category-badge">{item.category}</span>}{ins.length>0&&<span className="mini-badge">입고 {ins.length}건</span>}</td>
         <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="단위" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
         <td><input disabled={!editable} className="num" value={r.opening_stock??""} onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
-        <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><input disabled={!editable} className="screen-date" aria-label={`${item.name} 입고일자`} title={ins[0]?.quantity&&!ins[0]?.incoming_date?"입고일자를 입력하세요":"입고일자"} type="date" required value={ins[0]?.incoming_date||""} onChange={e=>patchIncoming(item.id,{incoming_date:e.target.value})}/><span className="print-date">{ins[0]?.incoming_date?fmtDate(ins[0].incoming_date):""}</span></td>
+        <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><DateFields disabled={!editable} label={`${item.name} 입고일자`} value={ins[0]?.incoming_date||""} onChange={value=>patchIncoming(item.id,{incoming_date:value})}/><span className="print-date">{ins[0]?.incoming_date?fmtDate(ins[0].incoming_date):""}</span></td>
         <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량`} className="incoming-qty" value={ins[0]?.quantity||""} onChange={e=>patchIncoming(item.id,{quantity:e.target.value})}/></td>
         {DAYS.map(d=><td key={d}><input disabled={!editable} className="num" value={r[d+"_usage"]??""} onChange={e=>patchRecord(item.id,{[d+"_usage"]:e.target.value})}/></td>)}
         <td className="stock-cell"><input disabled={!editable} className={`stock ${numeric(st)<0?"negative":numeric(st)===0?"zero":""}`} value={r.manual_stock!==""&&r.manual_stock!=null?r.manual_stock:(st==null?"직접 확인":displayNum(st))}
@@ -440,7 +463,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
           {numeric(st)===0&&<span className="stock-badge zero-badge">재고 없음</span>}
           {numeric(st)<0&&<span className="stock-badge neg-badge">재고 확인</span>}
         </td>
-        <td className="date-cell"><input disabled={!editable} className="screen-date" type="date" value={expirationFor(item,r)} onChange={e=>patchRecord(item.id,item.category==="야채·채소"?{consumption_date:e.target.value}:{expiration_date:e.target.value})}/><span className="print-date">{expirationFor(item,r)?fmtDate(expirationFor(item,r)):""}</span>
+        <td className="date-cell"><DateFields disabled={!editable} label={`${item.name} 기한`} value={expirationFor(item,r)} onChange={value=>patchRecord(item.id,item.category==="야채·채소"?{consumption_date:value}:{expiration_date:value})}/><span className="print-date">{expirationFor(item,r)?fmtDate(expirationFor(item,r)):""}</span>
           {status&&<span className={"expiry "+(status==="임박"?"near":status==="기한 지남"?"passed":"ok")}>{status}</span>}
         </td>
         <td><select disabled={!editable} value={r.storage_method||item.storage_method} onChange={e=>patchRecord(item.id,{storage_method:e.target.value})}>{STORAGE_METHODS.map(x=><option key={x}>{x}</option>)}</select></td>
@@ -452,11 +475,12 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
 }
 
 function ItemModal({data,defaults,onClose,onSave}){
-  const [form,setForm]=useState(data||{name:"",category:defaults?.category||"냉장식품",unit:"",storage_method:"냉장",expiration_type:"유통기한",active:true});
+  const initialCategory=defaults?.category||"냉장식품";
+  const [form,setForm]=useState(data||{name:"",category:initialCategory,unit:"",storage_method:defaultStorageForCategory(initialCategory),expiration_type:"유통기한",active:true});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   return <Modal title={data?"품목 수정":"품목 추가"} onClose={onClose}>
     <div className="form-grid"><label>품목명<input value={form.name} onChange={e=>set("name",e.target.value)}/></label>
-    <label>카테고리<select value={form.category} onChange={e=>set("category",e.target.value)}>{CATEGORIES.map(x=><option key={x}>{x}</option>)}</select></label>
+    <label>카테고리<select value={form.category} onChange={e=>{const category=e.target.value;setForm(f=>({...f,category,storage_method:defaultStorageForCategory(category)}))}}>{CATEGORIES.map(x=><option key={x}>{x}</option>)}</select></label>
     <label>보관방법<select value={form.storage_method} onChange={e=>set("storage_method",e.target.value)}>{STORAGE_METHODS.map(x=><option key={x}>{x}</option>)}</select></label>
     <label>기한 관리 방식<select value={form.expiration_type} onChange={e=>set("expiration_type",e.target.value)}><option>유통기한</option><option>납품일/소비기한</option></select></label>
     <label className="check"><input type="checkbox" checked={form.active!==false} onChange={e=>set("active",e.target.checked)}/> 사용 품목</label></div>
@@ -464,7 +488,7 @@ function ItemModal({data,defaults,onClose,onSave}){
   </Modal>
 }
 function IncomingModal({item,data,onClose,onSave}){const [form,setForm]=useState(data);return <Modal title={`${item?.name||""} · 입고 추가`} onClose={onClose}>
-  <div className="form-grid"><label>입고일<input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/></label><label>입고수량<input autoFocus value={form.quantity} onChange={e=>setForm({...form,quantity:e.target.value})} placeholder="예: 30"/></label></div>
+  <div className="form-grid"><label>입고일<DateFields value={form.date} onChange={date=>setForm({...form,date})}/></label><label>입고수량<input autoFocus value={form.quantity} onChange={e=>setForm({...form,quantity:e.target.value})} placeholder="예: 30"/></label></div>
   <div className="modal-actions"><button onClick={onClose}>취소</button><button className="primary" onClick={()=>onSave(form)}>입고 추가</button></div>
 </Modal>}
 function Modal({title,onClose,children}){return <div className="overlay"><div className="modal"><div className="modal-head"><h2>{title}</h2><button onClick={onClose}>×</button></div>{children}</div></div>}
