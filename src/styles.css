@@ -339,6 +339,9 @@ button:hover{background:#f3f4f6}
 .title-utility button{background:#FC608F!important;color:#fff!important;border-color:#FC608F!important;font-weight:700}
 .title-utility button:hover{background:#ef4f80!important;border-color:#ef4f80!important}
 
+/* 품목 수에 맞춰 표가 아래로 계속 늘어나고, 페이지 전체가 세로로 스크롤됩니다. */
+.table-wrap{max-height:none!important;overflow-x:auto;overflow-y:visible}
+
 /* Full backup and restore */
 .backup-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .backup-actions button{height:42px;font-weight:700}

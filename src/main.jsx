@@ -465,7 +465,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
       const r=records.find(x=>x.weekly_record_id===week.start&&x.item_id===item.id)||{};
       const ins=getIncoming(item.id), total=totalIncoming(item.id), st=effectiveStock(r), status=expiryStatus(expirationFor(item,r));
       return <tr key={item.id}>
-        <td className="sticky-col item-name"><input autoFocus={!item.name} disabled={!editable} className="item-name-input" aria-label={`${item.name||"새 품목"} 품목명 수정`} value={item.name} onChange={e=>patchItem(item.id,{name:e.target.value})}/>{showCategory&&<span className="item-category-badge">{item.category}</span>}{ins.length>0&&<span className="mini-badge">입고 {ins.length}건</span>}</td>
+        <td className="sticky-col item-name"><input autoFocus={!item.name} disabled={!editable} className="item-name-input" aria-label={`${item.name||"새 품목"} 품목명 수정`} value={item.name} onChange={e=>patchItem(item.id,{name:e.target.value})}/>{showCategory&&<span className="item-category-badge">{item.category}</span>}</td>
         <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="단위" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
         <td><input disabled={!editable} className="num" value={r.opening_stock??""} onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
         <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><DateFields disabled={!editable} label={`${item.name} 입고일자`} value={ins[0]?.incoming_date||""} onChange={value=>patchIncoming(item.id,{incoming_date:value})}/><span className="print-date">{ins[0]?.incoming_date?fmtDate(ins[0].incoming_date):""}</span></td>
