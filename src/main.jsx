@@ -269,8 +269,10 @@ function App(){
   }).filter(Boolean),[activeItems,category,records,week.start]);
   const printPages=useMemo(()=>{
     if(!visible.length)return [[]];
-    const pages=[visible.slice(0,21)];
-    for(let i=21;i<visible.length;i+=24)pages.push(visible.slice(i,i+24));
+    const firstPageCount=20;
+    const followingPageCount=24;
+    const pages=[visible.slice(0,firstPageCount)];
+    for(let i=firstPageCount;i<visible.length;i+=followingPageCount)pages.push(visible.slice(i,i+followingPageCount));
     return pages;
   },[visible]);
 
