@@ -371,7 +371,7 @@ function App(){
 
     <main className="container">
       <section className="title-row">
-        <div><h1>이번 주 식자재 수불대장</h1><div className="range">{fmtRange(week)}</div><div className="print-category">{category}</div></div>
+        <div><h1>이번 주 식자재 수불대장</h1><div className="range">{fmtRange(week)}</div><div className="print-category">분류: {category}</div></div>
         <div className="title-right-stack"><div className="title-utility"><button onClick={printNow}>🖨 인쇄 / PDF 저장</button><input className="title-date" aria-label="날짜 선택" type="date" value={calendarDate} onChange={e=>{if(!e.target.value)return;setCalendarDate(e.target.value);setDate(isoDate(mondayOf(parseLocal(e.target.value))))}}/></div><div className="filters"><div className="search">⌕<input placeholder="품목 검색" value={search} onChange={e=>setSearch(e.target.value)}/></div>{["전체","이번 주 입고","재고 없음","재고 확인"].map(f=><button className={filter===f?"filter active-filter":"filter"} onClick={()=>setFilter(f)} key={f}>{f}</button>)}</div></div>
         <section className="print-approval" aria-label="결재란">
           <div className="approval-title">결<br/><br/>재</div>
