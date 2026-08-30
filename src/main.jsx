@@ -46,26 +46,16 @@ function load(key, fallback) {
 function save(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 function uid(){return crypto.randomUUID();}
 function DateFields({value="",onChange,disabled=false,label="날짜"}){
-  const parts=String(value||"").split("-");
-  const [year,setYear]=useState(parts[0]||"");
-  const [month,setMonth]=useState(parts[1]||"");
-  const [day,setDay]=useState(parts[2]||"");
-  const monthRef=useRef(null),dayRef=useRef(null);
-  useEffect(()=>{const p=String(value||"").split("-");setYear(p[0]||"");setMonth(p[1]||"");setDay(p[2]||"")},[value]);
-  const update=(part,raw)=>{
-    const v=raw.replace(/\D/g,"");
-    let y=year,m=month,d=day;
-    if(part==="year"){y=v.slice(0,4);setYear(y);if(y.length===4)monthRef.current?.focus()}
-    if(part==="month"){m=v.slice(0,2);setMonth(m);if(m.length===2)dayRef.current?.focus()}
-    if(part==="day"){d=v.slice(0,2);setDay(d)}
-    if(y.length===4&&m.length===2&&d.length===2) onChange(`${y}-${m}-${d}`);
-    else if(!y&&!m&&!d) onChange("");
+  const [text,setText]=useState(String(value||""));
+  useEffect(()=>setText(String(value||"")),[value]);
+  const update=raw=>{
+    const digits=raw.replace(/\D/g,"").slice(0,8);
+    const formatted=digits.length<=4?digits:digits.length<=6?`${digits.slice(0,4)}-${digits.slice(4)}`:`${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6)}`;
+    setText(formatted);
+    if(digits.length===8) onChange(formatted);
+    else if(!digits.length) onChange("");
   };
-  return <span className="date-parts screen-date" aria-label={label}>
-    <input disabled={disabled} inputMode="numeric" aria-label={`${label} 연도`} value={year} maxLength={4} onChange={e=>update("year",e.target.value)}/><i>-</i>
-    <input ref={monthRef} disabled={disabled} inputMode="numeric" aria-label={`${label} 월`} value={month} maxLength={2} onChange={e=>update("month",e.target.value)}/><i>-</i>
-    <input ref={dayRef} disabled={disabled} inputMode="numeric" aria-label={`${label} 일`} value={day} maxLength={2} onChange={e=>update("day",e.target.value)}/>
-  </span>;
+  return <input className="date-full-input screen-date" disabled={disabled} inputMode="numeric" aria-label={label} value={text} maxLength={10} onFocus={e=>e.target.select()} onChange={e=>update(e.target.value)}/>;
 }
 function isoDate(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -80,6 +70,7 @@ function weekInfo(date){
   return {start:isoDate(s),end:isoDate(e),startDate:s,endDate:e};
 }
 function fmtDate(s){if(!s)return ""; const d=parseLocal(s); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,"0")}.${String(d.getDate()).padStart(2,"0")}`}
+function fmtShortDate(s){if(!s)return ""; const [y,m,d]=s.split("-"); return `${String(y).slice(-2)}.${m}.${d}`}
 function fmtRange(w){return `${w.startDate.getFullYear()}년 ${w.startDate.getMonth()+1}월 ${w.startDate.getDate()}일 ~ ${w.endDate.getMonth()+1}월 ${w.endDate.getDate()}일`}
 function displayNum(v){ if(v==null||v==="")return ""; const n=Number(v); return Number.isFinite(n)?String(Number(n.toFixed(4))):String(v)}
 function numeric(v){
@@ -272,6 +263,10 @@ function App(){
     activeItems.forEach(i=>{const r=recordFor(i),s=numeric(effectiveStock(r)); if(s===0)no++; if(s<0)check++; if(expiryStatus(expirationFor(i,r))==="임박")near++;});
     return {total:activeItems.length,no,check,near};
   },[activeItems,records,incoming,week.start]);
+  const printExpiryItems=useMemo(()=>activeItems.filter(item=>item.category===category).map(item=>{
+    const record=recordFor(item),expiration=expirationFor(item,record);
+    return expiryStatus(expiration)==="임박"?`${item.name}(${fmtShortDate(expiration)})`:null;
+  }).filter(Boolean),[activeItems,category,records,week.start]);
 
   function addItem(data){
     const item={...data,id:uid(),active:true,sort_order:items.length,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
@@ -408,6 +403,8 @@ function App(){
         getIncoming={getIncoming} totalIncoming={totalIncoming} patchIncoming={patchIncoming}
         expirationFor={expirationFor} expiryStatus={expiryStatus} effectiveStock={effectiveStock} onDelete={deleteItem} showCategory={filter==="기한 임박"} editable={!!editPin}
         onAdd={()=>addBlankItem(category)}/>
+
+      {printExpiryItems.length>0&&<div className="print-expiry-note">*기한임박: {printExpiryItems.join(", ")}.</div>}
 
       <div className="print-logo"><img src="/rowoon-center-logo.png" alt="사회적협동조합 로운주간이용센터"/></div>
 
