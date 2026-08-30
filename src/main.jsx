@@ -393,7 +393,8 @@ function App(){
 
       <InventoryTable items={visible} records={records} incoming={incoming} week={week} patchRecord={patchRecord} patchItem={patchItem}
         getIncoming={getIncoming} totalIncoming={totalIncoming} patchIncoming={patchIncoming}
-        expirationFor={expirationFor} expiryStatus={expiryStatus} effectiveStock={effectiveStock} onDelete={deleteItem} showCategory={filter==="기한 임박"} editable={!!editPin}/>
+        expirationFor={expirationFor} expiryStatus={expiryStatus} effectiveStock={effectiveStock} onDelete={deleteItem} showCategory={filter==="기한 임박"} editable={!!editPin}
+        onAdd={()=>setModal({type:"item",data:null,defaults:{category}})}/>
 
       <div className="print-logo"><img src="/rowoon-center-logo.png" alt="사회적협동조합 로운주간이용센터"/></div>
 
@@ -441,7 +442,7 @@ function App(){
 
 function Summary({title,value,icon,onClick,active,emphasis}){return <button className={`summary-card ${active?"summary-active":""} ${emphasis?`summary-${emphasis}`:""}`} onClick={onClick}><span className="summary-icon">{icon}</span><span><small>{title}</small><strong>{value}</strong></span></button>}
 
-function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIncoming,totalIncoming,patchIncoming,expirationFor,expiryStatus,effectiveStock,onDelete,showCategory,editable}){
+function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIncoming,totalIncoming,patchIncoming,expirationFor,expiryStatus,effectiveStock,onDelete,showCategory,editable,onAdd}){
   return <div className="table-wrap"><table className="inventory">
     <thead><tr>
       <th className="sticky-col item-col">품목명</th><th>단위</th><th>기초재고<br/>(전주이월)</th><th>입고일자</th><th>입고수량</th>
@@ -471,6 +472,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
         <td className="delete-cell"><button disabled={!editable} title={`${item.name} 삭제`} aria-label={`${item.name} 삭제`} onClick={()=>onDelete(item)}>삭제</button></td>
       </tr>
     })}</tbody>
+    <tfoot className="table-add-footer"><tr><td colSpan="15"><button disabled={!editable} onClick={onAdd}>＋ 품목 추가</button></td></tr></tfoot>
   </table>{items.length===0&&<div className="empty">조건에 맞는 품목이 없습니다.</div>}</div>
 }
 
