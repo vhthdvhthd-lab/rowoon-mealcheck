@@ -131,12 +131,12 @@ function App(){
   useEffect(()=>{
     save(STORAGE.items,items); save(STORAGE.weeks,weeks); save(STORAGE.records,records); save(STORAGE.incoming,incoming);
     if(!cloudReady||!editPin)return;
-    latestCloudState.current={items,weeks,records,incoming};
+    latestCloudState.current={items,weeks,records,incoming,activeWeek:weekInfo(parseLocal(date)).start};
     clearTimeout(saveTimer.current);
     setSaveState("변경 내용 대기 중...");
     saveTimer.current=setTimeout(()=>flushCloudSave(),5000);
     if(!maxSaveTimer.current)maxSaveTimer.current=setTimeout(()=>flushCloudSave(),30000);
-  },[items,weeks,records,incoming,cloudReady,editPin]);
+  },[items,weeks,records,incoming,date,cloudReady,editPin]);
 
   useEffect(()=>{
     const saveBeforeLeave=()=>{if(latestCloudState.current)fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(latestCloudState.current),keepalive:true}).catch(()=>{})};
@@ -301,11 +301,29 @@ function App(){
     setTimeout(()=>setSaveState("저장됨"),1200);
   }
   function printNow(){window.print()}
+  function exportBackup(){
+    const backup={format:"rowoon-weekly-inventory-backup",version:1,exportedAt:new Date().toISOString(),state:{items,weeks,records,incoming}};
+    const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=`로운_주간식자재_전체백업_${isoDate(new Date())}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  }
+  async function restoreBackup(file){
+    try{
+      const backup=JSON.parse(await file.text()),state=backup?.state;
+      if(backup?.format!=="rowoon-weekly-inventory-backup"||!state||![state.items,state.weeks,state.records,state.incoming].every(Array.isArray))throw new Error("invalid");
+      if(!confirm(`'${file.name}'의 내용으로 전체 자료를 복원할까요?\n복원 직전에 현재 자료도 자동으로 백업됩니다.`))return;
+      exportBackup();setSaveState("전체 자료 복원 중...");
+      const response=await fetch("/api/state?restore=1",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({...state,activeWeek:weekInfo(parseLocal(date)).start})});
+      if(!response.ok)throw new Error("restore failed");
+      latestCloudState.current=null;setItems(state.items);setWeeks(state.weeks);setRecords(state.records);setIncoming(state.incoming);setSaveState("전체 자료 복원됨");
+      alert("백업 자료를 정상적으로 복원했습니다.");
+    }catch{setSaveState("복원 실패");alert("올바른 로운 수불대장 백업파일인지 확인해주세요.")}
+  }
 
   if(page==="items") return <><ItemPage items={items} editable={true} onBack={()=>setPage("weekly")} onAdd={()=>setModal({type:"item",data:null})}
     onEdit={i=>setModal({type:"item",data:i})} onToggle={setItemActive} onDelete={deleteItem} onReorder={reorder}/>
     {modal?.type==="item"&&<ItemModal data={modal.data} defaults={modal.defaults} onClose={()=>setModal(null)} onSave={modal.data?updateItem:addItem}/>}</>;
-  if(page==="history") return <HistoryPage weeks={weeks} onBack={()=>setPage("weekly")} onOpen={s=>{setDate(s);setCalendarDate(s);setPage("weekly")}}/>;
+  if(page==="history") return <HistoryPage weeks={weeks} onBackup={exportBackup} onRestore={restoreBackup} onBack={()=>setPage("weekly")} onOpen={s=>{setDate(s);setCalendarDate(s);setPage("weekly")}}/>;
 
   return <div className="app">
     <header className="topbar">
@@ -452,7 +470,10 @@ function ItemPage({items,editable,onUnlock,onBack,onAdd,onEdit,onToggle,onDelete
   <div className="toolbar simple"><div className="search">⌕<input placeholder="품목 검색" value={q} onChange={e=>setQ(e.target.value)}/></div><div className="tabs">{["전체",...CATEGORIES].map(c=><button className={cat===c?"active":""} onClick={()=>setCat(c)} key={c}>{c}</button>)}</div></div>
   <div className="master-list">{list.map(i=><div className={`master-row ${i.active?"":"inactive-row"}`} key={i.id}><div className="order"><button disabled={!editable} title="위로" onClick={()=>onReorder(i.id,-1)}>↑</button><button disabled={!editable} title="아래로" onClick={()=>onReorder(i.id,1)}>↓</button></div><div className="master-name"><b>{i.name}</b><span>{i.category}</span></div><span className="master-unit">{i.unit||"단위 미입력"}</span><span>{i.storage_method}</span><span className={i.active?"status-on":"status-off"}>{i.active?"사용 중":"숨김"}</span><div className="master-actions"><button disabled={!editable} onClick={()=>onEdit(i)}>수정</button><button disabled={!editable} onClick={()=>onToggle(i.id,!i.active)}>{i.active?"숨기기":"다시 사용"}</button><button disabled={!editable} className="danger-text" onClick={()=>onDelete(i)}>삭제</button></div></div>)}{!list.length&&<div className="empty">조건에 맞는 품목이 없습니다.</div>}</div></main></div>
 }
-function HistoryPage({weeks,onBack,onOpen}){const list=[...weeks].sort((a,b)=>b.start.localeCompare(a.start));return <div className="app"><header className="topbar"><div className="brand"><div className="star">✦</div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 기록</div></div></div><button className="ghost" onClick={onBack}>← 주간 수불대장</button></header><main className="container"><div className="page-head"><div><h1>주간 기록</h1><p>작성했던 주간 수불대장을 다시 열 수 있습니다.</p></div></div><div className="history-list">{list.map(w=><button key={w.start} onClick={()=>onOpen(w.start)}><span>주간 수불대장</span><b>{fmtDate(w.start)} ~ {fmtDate(w.end)}</b><span>열기 →</span></button>)}{!list.length&&<div className="empty">아직 작성된 주간 기록이 없습니다.</div>}</div></main></div>}
+function HistoryPage({weeks,onBack,onOpen,onBackup,onRestore}){
+  const list=[...weeks].sort((a,b)=>b.start.localeCompare(a.start)),fileRef=useRef(null);
+  return <div className="app"><header className="topbar"><div className="brand"><div className="star">✦</div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 기록</div></div></div><button className="ghost" onClick={onBack}>← 주간 수불대장</button></header><main className="container"><div className="page-head"><div><h1>주간 기록</h1><p>작성했던 주간 수불대장을 다시 열거나 전체 자료를 안전하게 백업할 수 있습니다.</p></div><div className="backup-actions"><button className="backup-save" onClick={onBackup}>⬇ 전체 백업 저장</button><button onClick={()=>fileRef.current?.click()}>↥ 백업 불러오기</button><input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={e=>{const file=e.target.files?.[0];if(file)onRestore(file);e.target.value=""}}/></div></div><div className="backup-guide">백업파일에는 품목, 입고수량, 사용량, 재고현황과 모든 주차 기록이 포함됩니다.</div><div className="history-list">{list.map(w=><button key={w.start} onClick={()=>onOpen(w.start)}><span>주간 수불대장</span><b>{fmtDate(w.start)} ~ {fmtDate(w.end)}</b><span>열기 →</span></button>)}{!list.length&&<div className="empty">아직 작성된 주간 기록이 없습니다.</div>}</div></main></div>
+}
 function Help({onClose}){return <div className="overlay"><div className="help modal"><div className="modal-head"><h2>처음 사용하시나요?</h2><button onClick={onClose}>×</button></div><ol><li>품목은 한 번만 등록하면 됩니다.</li><li>주차를 열면 월~금이 자동으로 계산됩니다.</li><li>지난주 재고현황이 이번 주 기초재고로 자동 이월됩니다.</li><li>입고와 월~금 사용량을 입력하세요.</li><li>재고현황은 자동 계산되며 실제 재고와 다르면 직접 수정할 수 있습니다.</li><li>오른쪽 위 <b>인쇄 / PDF 저장</b>으로 A4 문서를 만들 수 있습니다.</li></ol><div className="modal-actions"><button className="primary" onClick={onClose}>확인</button></div></div></div>}
 
 function PinModal({onClose,onSuccess}){

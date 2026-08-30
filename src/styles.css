@@ -323,6 +323,16 @@ button:hover{background:#f3f4f6}
 .title-utility button{background:#d875a3!important;color:#fff!important;border-color:#d875a3!important;font-weight:700}
 .title-utility button:hover{background:#c95f90!important;border-color:#c95f90!important}
 
+/* Full backup and restore */
+.backup-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.backup-actions button{height:42px;font-weight:700}
+.backup-actions .backup-save{background:#2563eb;color:#fff;border-color:#2563eb}
+.backup-actions .backup-save:hover{background:#1d4ed8}
+.backup-guide{margin:-8px 0 14px;padding:11px 14px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;color:#1e40af;font-size:13px}
+
+@media(max-width:900px){.backup-actions{width:100%}.backup-actions button{flex:1}}
+@media print{.backup-actions,.backup-guide{display:none!important}}
+
 /* Shared editing lock */
 .edit-locked,.edit-unlocked{font-weight:700;white-space:nowrap}
 .edit-locked{background:#fff7ed;border-color:#fdba74;color:#9a3412}
