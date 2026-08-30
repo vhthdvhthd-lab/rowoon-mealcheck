@@ -430,10 +430,10 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
       return <tr key={item.id}>
         <td className="sticky-col item-name"><b>{item.name}</b>{showCategory&&<span className="item-category-badge">{item.category}</span>}{ins.length>0&&<span className="mini-badge">입고 {ins.length}건</span>}</td>
         <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="단위" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
-        <td><input disabled={!editable} className="num" value={r.opening_stock??""} placeholder="예: 1/4" onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
+        <td><input disabled={!editable} className="num" value={r.opening_stock??""} onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
         <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><input disabled={!editable} className="screen-date" aria-label={`${item.name} 입고일자`} title={ins[0]?.quantity&&!ins[0]?.incoming_date?"입고일자를 입력하세요":"입고일자"} type="date" required value={ins[0]?.incoming_date||""} onChange={e=>patchIncoming(item.id,{incoming_date:e.target.value})}/><span className="print-date">{ins[0]?.incoming_date?fmtDate(ins[0].incoming_date):""}</span></td>
-        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량`} className="incoming-qty" value={ins[0]?.quantity||""} placeholder="0.5 / 1/4" onChange={e=>patchIncoming(item.id,{quantity:e.target.value})}/></td>
-        {DAYS.map(d=><td key={d}><input disabled={!editable} className="num" value={r[d+"_usage"]??""} placeholder="0.5 / 1/4" onChange={e=>patchRecord(item.id,{[d+"_usage"]:e.target.value})}/></td>)}
+        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량`} className="incoming-qty" value={ins[0]?.quantity||""} onChange={e=>patchIncoming(item.id,{quantity:e.target.value})}/></td>
+        {DAYS.map(d=><td key={d}><input disabled={!editable} className="num" value={r[d+"_usage"]??""} onChange={e=>patchRecord(item.id,{[d+"_usage"]:e.target.value})}/></td>)}
         <td className="stock-cell"><input disabled={!editable} className={`stock ${numeric(st)<0?"negative":numeric(st)===0?"zero":""}`} value={r.manual_stock!==""&&r.manual_stock!=null?r.manual_stock:(st==null?"직접 확인":displayNum(st))}
           onChange={e=>patchRecord(item.id,{manual_stock:e.target.value})}/>
           {r.manual_stock!==""&&r.manual_stock!=null?<span className="manual">수동 수정</span>:null}
