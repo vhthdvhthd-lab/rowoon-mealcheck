@@ -64,8 +64,15 @@ function numeric(v){
   if(typeof v==="number") return v;
   const s=String(v).trim().replace(/,/g,"");
   if(/^[-+]?\d*\.?\d+$/.test(s)) return Number(s);
+  const mixed=s.match(/^(-?\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if(mixed){
+    const denominator=Number(mixed[3]);
+    if(denominator===0) return null;
+    const whole=Number(mixed[1]), fraction=Number(mixed[2])/denominator;
+    return whole<0?whole-fraction:whole+fraction;
+  }
   const frac=s.match(/^(-?\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
-  if(frac) return Number(frac[1])/Number(frac[2]);
+  if(frac) return Number(frac[2])===0?null:Number(frac[1])/Number(frac[2]);
   const unit=s.match(/^(-?\d*\.?\d+)\s*(g|kg|개|알|봉지|통|쪽|단|망|ml)?$/i);
   return unit?Number(unit[1]):null;
 }
@@ -423,10 +430,10 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
       return <tr key={item.id}>
         <td className="sticky-col item-name"><b>{item.name}</b>{showCategory&&<span className="item-category-badge">{item.category}</span>}{ins.length>0&&<span className="mini-badge">입고 {ins.length}건</span>}</td>
         <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="단위" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
-        <td><input disabled={!editable} className="num" value={r.opening_stock??""} onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
+        <td><input disabled={!editable} className="num" value={r.opening_stock??""} placeholder="예: 1/4" onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
         <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><input disabled={!editable} className="screen-date" aria-label={`${item.name} 입고일자`} title={ins[0]?.quantity&&!ins[0]?.incoming_date?"입고일자를 입력하세요":"입고일자"} type="date" required value={ins[0]?.incoming_date||""} onChange={e=>patchIncoming(item.id,{incoming_date:e.target.value})}/><span className="print-date">{ins[0]?.incoming_date?fmtDate(ins[0].incoming_date):""}</span></td>
-        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량`} className="incoming-qty" value={ins[0]?.quantity||""} placeholder="수량" onChange={e=>patchIncoming(item.id,{quantity:e.target.value})}/></td>
-        {DAYS.map(d=><td key={d}><input disabled={!editable} className="num" value={r[d+"_usage"]??""} onChange={e=>patchRecord(item.id,{[d+"_usage"]:e.target.value})}/></td>)}
+        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량`} className="incoming-qty" value={ins[0]?.quantity||""} placeholder="0.5 / 1/4" onChange={e=>patchIncoming(item.id,{quantity:e.target.value})}/></td>
+        {DAYS.map(d=><td key={d}><input disabled={!editable} className="num" value={r[d+"_usage"]??""} placeholder="0.5 / 1/4" onChange={e=>patchRecord(item.id,{[d+"_usage"]:e.target.value})}/></td>)}
         <td className="stock-cell"><input disabled={!editable} className={`stock ${numeric(st)<0?"negative":numeric(st)===0?"zero":""}`} value={r.manual_stock!==""&&r.manual_stock!=null?r.manual_stock:(st==null?"직접 확인":displayNum(st))}
           onChange={e=>patchRecord(item.id,{manual_stock:e.target.value})}/>
           {r.manual_stock!==""&&r.manual_stock!=null?<span className="manual">수동 수정</span>:null}
@@ -474,7 +481,7 @@ function HistoryPage({weeks,onBack,onOpen,onBackup,onRestore}){
   const list=[...weeks].sort((a,b)=>b.start.localeCompare(a.start)),fileRef=useRef(null);
   return <div className="app"><header className="topbar"><div className="brand"><div className="star">✦</div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 기록</div></div></div><button className="ghost" onClick={onBack}>← 주간 수불대장</button></header><main className="container"><div className="page-head"><div><h1>주간 기록</h1><p>작성했던 주간 수불대장을 다시 열거나 전체 자료를 안전하게 백업할 수 있습니다.</p></div><div className="backup-actions"><button className="backup-save" onClick={onBackup}>⬇ 전체 백업 저장</button><button onClick={()=>fileRef.current?.click()}>↥ 백업 불러오기</button><input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={e=>{const file=e.target.files?.[0];if(file)onRestore(file);e.target.value=""}}/></div></div><div className="backup-guide">백업파일에는 품목, 입고수량, 사용량, 재고현황과 모든 주차 기록이 포함됩니다.</div><div className="history-list">{list.map(w=><button key={w.start} onClick={()=>onOpen(w.start)}><span>주간 수불대장</span><b>{fmtDate(w.start)} ~ {fmtDate(w.end)}</b><span>열기 →</span></button>)}{!list.length&&<div className="empty">아직 작성된 주간 기록이 없습니다.</div>}</div></main></div>
 }
-function Help({onClose}){return <div className="overlay"><div className="help modal"><div className="modal-head"><h2>처음 사용하시나요?</h2><button onClick={onClose}>×</button></div><ol><li>품목은 한 번만 등록하면 됩니다.</li><li>주차를 열면 월~금이 자동으로 계산됩니다.</li><li>지난주 재고현황이 이번 주 기초재고로 자동 이월됩니다.</li><li>입고와 월~금 사용량을 입력하세요.</li><li>재고현황은 자동 계산되며 실제 재고와 다르면 직접 수정할 수 있습니다.</li><li>오른쪽 위 <b>인쇄 / PDF 저장</b>으로 A4 문서를 만들 수 있습니다.</li></ol><div className="modal-actions"><button className="primary" onClick={onClose}>확인</button></div></div></div>}
+function Help({onClose}){return <div className="overlay"><div className="help modal"><div className="modal-head"><h2>처음 사용하시나요?</h2><button onClick={onClose}>×</button></div><ol><li>품목은 한 번만 등록하면 됩니다.</li><li>주차를 열면 월~금이 자동으로 계산됩니다.</li><li>지난주 재고현황이 이번 주 기초재고로 자동 이월됩니다.</li><li>입고와 월~금 사용량은 정수뿐 아니라 <b>0.5, 1/4, 1 1/4</b>처럼 소수와 분수로도 입력할 수 있습니다.</li><li>재고현황은 자동 계산되며 실제 재고와 다르면 직접 수정할 수 있습니다.</li><li>오른쪽 위 <b>인쇄 / PDF 저장</b>으로 A4 문서를 만들 수 있습니다.</li></ol><div className="modal-actions"><button className="primary" onClick={onClose}>확인</button></div></div></div>}
 
 function PinModal({onClose,onSuccess}){
   const [pin,setPin]=useState(""); const [error,setError]=useState(""); const [checking,setChecking]=useState(false);
