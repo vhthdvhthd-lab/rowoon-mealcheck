@@ -398,27 +398,21 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
     page-break-after:auto!important;
   }
 
-  .screen-inventory{display:none!important}
-  .print-inventory-pages{display:block!important}
-  .print-inventory-page{
+  /* 표는 브라우저가 용지 높이에 맞춰 자동 분할하고, 로고만 매 장의 꼬리말로 반복 */
+  .print-logo{
     display:block!important;
-    break-after:page!important;
-    page-break-after:always!important;
-  }
-  .print-inventory-page:last-child{
+    position:fixed!important;
+    right:3mm!important;
+    bottom:-10mm!important;
+    width:auto!important;
+    height:auto!important;
+    margin:0!important;
+    padding:0!important;
     break-after:auto!important;
     page-break-after:auto!important;
+    z-index:100!important;
   }
-  .print-page-logo{
-    display:flex!important;
-    justify-content:flex-end!important;
-    align-items:center!important;
-    width:calc(100% - 3mm)!important;
-    margin:5px 3mm 0 0!important;
-    break-inside:avoid!important;
-    page-break-inside:avoid!important;
-  }
-  .print-page-logo img{
+  .print-logo img{
     display:block!important;
     width:105px!important;
     height:auto!important;

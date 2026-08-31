@@ -267,14 +267,6 @@ function App(){
     const record=recordFor(item),expiration=expirationFor(item,record);
     return expiryStatus(expiration)==="임박"?`${item.name}(${fmtShortDate(expiration)})`:null;
   }).filter(Boolean),[activeItems,category,records,week.start]);
-  const printPages=useMemo(()=>{
-    if(!visible.length)return [[]];
-    const firstPageCount=20;
-    const followingPageCount=24;
-    const pages=[visible.slice(0,firstPageCount)];
-    for(let i=firstPageCount;i<visible.length;i+=followingPageCount)pages.push(visible.slice(i,i+followingPageCount));
-    return pages;
-  },[visible]);
 
   function addItem(data){
     const item={...data,id:uid(),active:true,sort_order:items.length,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
@@ -407,23 +399,13 @@ function App(){
 
       {filter==="기한 임박"&&<div className="expiry-filter-note">전체 카테고리의 기한 임박 품목을 표시 중입니다.</div>}
 
-      <div className="screen-inventory">
-        <InventoryTable items={visible} records={records} incoming={incoming} week={week} patchRecord={patchRecord} patchItem={patchItem}
-          getIncoming={getIncoming} totalIncoming={totalIncoming} patchIncoming={patchIncoming}
-          expirationFor={expirationFor} expiryStatus={expiryStatus} effectiveStock={effectiveStock} onDelete={deleteItem} showCategory={filter==="기한 임박"} editable={!!editPin}
-          onAdd={()=>addBlankItem(category)}/>
-      </div>
+      <InventoryTable items={visible} records={records} incoming={incoming} week={week} patchRecord={patchRecord} patchItem={patchItem}
+        getIncoming={getIncoming} totalIncoming={totalIncoming} patchIncoming={patchIncoming}
+        expirationFor={expirationFor} expiryStatus={expiryStatus} effectiveStock={effectiveStock} onDelete={deleteItem} showCategory={filter==="기한 임박"} editable={!!editPin}
+        onAdd={()=>addBlankItem(category)}/>
 
-      <div className="print-inventory-pages">
-        {printPages.map((pageItems,pageIndex)=><section className="print-inventory-page" key={pageIndex}>
-          <InventoryTable items={pageItems} records={records} incoming={incoming} week={week} patchRecord={patchRecord} patchItem={patchItem}
-            getIncoming={getIncoming} totalIncoming={totalIncoming} patchIncoming={patchIncoming}
-            expirationFor={expirationFor} expiryStatus={expiryStatus} effectiveStock={effectiveStock} onDelete={deleteItem} showCategory={filter==="기한 임박"} editable={!!editPin}
-            onAdd={()=>addBlankItem(category)}/>
-          {pageIndex===printPages.length-1&&printExpiryItems.length>0&&<div className="print-expiry-note">*기한임박: {printExpiryItems.join(", ")}.</div>}
-          <div className="print-page-logo"><img src="/rowoon-center-logo.png" alt="사회적협동조합 로운주간이용센터"/></div>
-        </section>)}
-      </div>
+      {printExpiryItems.length>0&&<div className="print-expiry-note">*기한임박: {printExpiryItems.join(", ")}.</div>}
+      <div className="print-logo"><img src="/rowoon-center-logo.png" alt="사회적협동조합 로운주간이용센터"/></div>
 
       <div className="footer-note">입력 내용은 공용 저장소에 자동 저장됩니다. 다른 컴퓨터에서도 같은 자료를 확인할 수 있습니다.</div>
     </main>
