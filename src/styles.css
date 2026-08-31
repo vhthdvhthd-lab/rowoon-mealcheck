@@ -374,7 +374,14 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
 
 /* Multi-page print layout: comfortable page margins, intact rows, repeated logo */
 @media print{
-  @page{size:A4 landscape;margin:15mm 7mm 15mm 19mm}
+  @page{
+    size:A4 landscape;
+    margin:15mm 7mm 15mm 19mm;
+    @bottom-right{
+      content:url("/rowoon-center-logo-footer.png");
+      vertical-align:middle;
+    }
+  }
 
   .table-wrap{
     overflow:visible!important;
@@ -398,24 +405,9 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
     page-break-after:auto!important;
   }
 
-  /* 표는 브라우저가 용지 높이에 맞춰 자동 분할하고, 로고만 매 장의 꼬리말로 반복 */
+  /* DOM 고정 로고는 사용하지 않고 @page 하단 꼬리말에서만 반복합니다. */
   .print-logo{
-    display:block!important;
-    position:fixed!important;
-    right:5mm!important;
-    bottom:-9mm!important;
-    width:auto!important;
-    height:auto!important;
-    margin:0!important;
-    padding:0!important;
-    break-after:auto!important;
-    page-break-after:auto!important;
-    z-index:100!important;
-  }
-  .print-logo img{
-    display:block!important;
-    width:105px!important;
-    height:auto!important;
+    display:none!important;
   }
   .print-expiry-note,
   .approval-title,
