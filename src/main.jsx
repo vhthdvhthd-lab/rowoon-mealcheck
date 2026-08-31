@@ -405,10 +405,11 @@ function App(){
         onAdd={()=>addBlankItem(category)}/>
 
       {printExpiryItems.length>0&&<div className="print-expiry-note">*기한임박: {printExpiryItems.join(", ")}.</div>}
-      <div className="print-logo"><img src="/rowoon-center-logo.png" alt="사회적협동조합 로운주간이용센터"/></div>
 
       <div className="footer-note">입력 내용은 공용 저장소에 자동 저장됩니다. 다른 컴퓨터에서도 같은 자료를 확인할 수 있습니다.</div>
     </main>
+
+    <footer className="print-logo" aria-label="인쇄용 로운주간이용센터 로고"><img src="/rowoon-center-logo.png" alt="사회적협동조합 로운주간이용센터"/></footer>
 
     {modal?.type==="item"&&<ItemModal data={modal.data} defaults={modal.defaults} onClose={()=>setModal(null)} onSave={modal.data?updateItem:addItem}/>} 
     {help&&<Help onClose={()=>{setHelp(false);save(STORAGE.help,true)}}/>}

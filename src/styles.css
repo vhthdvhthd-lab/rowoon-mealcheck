@@ -402,8 +402,8 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
   .print-logo{
     display:block!important;
     position:fixed!important;
-    right:3mm!important;
-    bottom:-10mm!important;
+    right:5mm!important;
+    bottom:-9mm!important;
     width:auto!important;
     height:auto!important;
     margin:0!important;
