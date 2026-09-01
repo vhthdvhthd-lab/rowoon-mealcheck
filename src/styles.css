@@ -454,28 +454,23 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
   .inventory .incoming-qty-cell .incoming-qty{font-size:10px!important;font-weight:400!important;letter-spacing:0!important}
 }
 
-/* 고해상도 로고를 모든 인쇄 페이지 오른쪽 아래에 반복 */
+/* 표와 분리된 종이 하단 여백에 고해상도 로고 반복 */
 @media print{
   @page{
     size:A4 landscape;
     margin:15mm 7mm 15mm 19mm;
+    @bottom-right{
+      content:"";
+      width:30mm;
+      height:8mm;
+      vertical-align:middle;
+      background-image:url("/rowoon-center-logo-footer.png");
+      background-repeat:no-repeat;
+      background-position:right center;
+      background-size:28mm auto;
+      -webkit-print-color-adjust:exact;
+      print-color-adjust:exact;
+    }
   }
-  .print-logo{
-    display:block!important;
-    position:fixed!important;
-    right:0!important;
-    bottom:-11mm!important;
-    width:28mm!important;
-    height:auto!important;
-    margin:0!important;
-    padding:0!important;
-    z-index:9999!important;
-  }
-  .print-logo img{
-    display:block!important;
-    width:28mm!important;
-    max-width:28mm!important;
-    height:auto!important;
-    object-fit:contain!important;
-  }
+  .print-logo{display:none!important}
 }
