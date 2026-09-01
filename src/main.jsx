@@ -125,10 +125,10 @@ function makeRecord(item, weekStart, opening=""){
     storage_method:item.storage_method,note:"",updated_at:new Date().toISOString()};
 }
 const FIRST_WEEK="2026-08-10";
-function stateBeforeAugust17(state){
-  return {...state,weeks:state.weeks.filter(w=>w.start<'2026-08-17'),
-    records:state.records.filter(r=>r.weekly_record_id<'2026-08-17'),
-    incoming:state.incoming.filter(i=>i.weekly_record_id<'2026-08-17'),activeWeek:FIRST_WEEK};
+function stateThroughWeek(state,start){
+  return {...state,weeks:state.weeks.filter(w=>w.start<=start),
+    records:state.records.filter(r=>r.weekly_record_id<=start),
+    incoming:state.incoming.filter(i=>i.weekly_record_id<=start),activeWeek:start};
 }
 function App(){
   const [items,setItems]=useState(()=>{
@@ -440,23 +440,27 @@ function App(){
     }catch(error){latestCloudState.current=pending;throw error;}
     finally{savingCloud.current=false;setDeletingWeek(false);}
   }
-  async function restartFromAugust10(){
+  async function restartFromCurrentWeek(){
+    const start=week.start;
     if(!cloudReady||savingCloud.current||deletingWeek){alert('자료를 불러오거나 저장 중입니다. 잠시 후 다시 시도해주세요.');return;}
-    if(!weeks.some(w=>w.start===FIRST_WEEK&&!w.deleted)||!records.some(r=>r.weekly_record_id===FIRST_WEEK)){
-      alert('먼저 8/10~14 사진 기록 복구 또는 주간 백업 불러오기로 8월 10일 기록을 준비해주세요.');return;
+    if(!weeks.some(w=>w.start===start&&!w.deleted)||!records.some(r=>r.weekly_record_id===start)){
+      alert('먼저 기준으로 삼을 주의 기록을 열어 확인해주세요.');return;
     }
-    if(!confirm('8월 10~14일 기록을 기준으로 다시 시작할까요?\n2026년 8월 17일 이후 모든 주간 기록(입고·사용량·재고·날짜·메모)이 삭제됩니다.\n8월 10~14일 내용은 그대로 보존하며, 실행 전에 전체 백업 파일을 내려받습니다.\n다른 컴퓨터의 수불대장은 닫은 뒤 진행해주세요.'))return;
+    const affected=[...new Set([...weeks.map(w=>w.start),...records.map(r=>r.weekly_record_id),...incoming.map(i=>i.weekly_record_id)].filter(s=>s>start))].sort();
+    if(!affected.length){alert('이후에 작성된 주간 기록이 없습니다. 다음 주 버튼을 눌러 이어서 작성하시면 됩니다.');return;}
+    if(!confirm(`현재 보고 있는 ${fmtDate(start)} ~ ${fmtDate(week.end)} 기록을 기준으로 다시 시작할까요?\n\n선택한 주와 이전 기록은 그대로 유지됩니다.\n삭제될 주간 기록 (${affected.length}개):\n${affected.map(s=>fmtDate(s)+' 시작 주').join('\n')}\n\n이후 기록의 입고·사용량·재고·날짜·메모가 삭제됩니다.\n먼저 전체 백업 파일을 자동 다운로드합니다.\n다른 컴퓨터의 수불대장은 닫은 뒤 진행해주세요.`))return;
     exportBackup();
+    if(!confirm('전체 백업 파일이 컴퓨터에 다운로드되었는지 확인해주세요.\n파일이 없으면 취소하세요.\n\n확인을 누르면 안내한 이후 주간 기록을 삭제하고 다시 시작합니다.'))return;
     clearTimeout(saveTimer.current);clearTimeout(maxSaveTimer.current);saveTimer.current=null;maxSaveTimer.current=null;
     const pending=latestCloudState.current;latestCloudState.current=null;savingCloud.current=true;setDeletingWeek(true);
-    setSaveState('8월 10일 기준으로 정리 중...');
+    setSaveState('선택한 주 기준으로 정리 중...');
     try{
-      const next=stateBeforeAugust17({items,weeks,records,incoming});
+      const next=stateThroughWeek({items,weeks,records,incoming},start);
       const response=await fetch('/api/state?restore=1',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(next)});
       if(!response.ok)throw new Error('restart failed');
       setWeeks(next.weeks);setRecords(next.records);setIncoming(next.incoming);setUndoState(null);
-      setRawDate(FIRST_WEEK);setCalendarDate(FIRST_WEEK);setPage('weekly');setSaveState('다시 시작 준비 저장됨');
-      alert('8월 17일 이후 기록을 정리했습니다. 8월 10~14일 내용을 확인하고 다음 주를 눌러 이어서 작성하세요.');
+      setRawDate(start);setCalendarDate(start);setPage('weekly');setSaveState('다시 시작 준비 저장됨');
+      alert('선택한 주 이후 기록을 정리했습니다. 다음 주 버튼을 눌러 이어서 작성하세요.');
     }catch{
       latestCloudState.current=pending;setSaveState('정리 실패 · 연결 확인');
       alert('정리를 완료하지 못했습니다. 내려받은 전체 백업 파일을 보관하고 연결 상태를 확인해주세요.');
@@ -479,13 +483,13 @@ function App(){
   if(page==="items") return <><ItemPage items={items} editable={true} onBack={()=>setPage("weekly")} onAdd={()=>setModal({type:"item",data:null})}
     onEdit={i=>setModal({type:"item",data:i})} onToggle={setItemActive} onDelete={deleteItem} onReorder={reorder}/>
     {modal?.type==="item"&&<ItemModal data={modal.data} defaults={modal.defaults} onClose={()=>setModal(null)} onSave={modal.data?updateItem:addItem}/>}</>;
-  if(page==="history") return <HistoryPage weeks={weeks} onDelete={deleteHistory} deleting={deletingWeek} onBackup={exportBackup} onBackupWeek={exportWeekBackup} onRecoverPhotos={()=>restoreWeekBackup(recoveredAugustWeek).catch(()=>alert('사진 기록 복구에 실패했습니다. 인터넷 연결을 확인해주세요.'))} onRestore={restoreBackup} onRestart={restartFromAugust10} onBack={()=>setPage("weekly")} onOpen={s=>{setDate(s);setCalendarDate(s);setPage("weekly")}}/>;
+  if(page==="history") return <HistoryPage weeks={weeks} onDelete={deleteHistory} deleting={deletingWeek} onBackup={exportBackup} onBackupWeek={exportWeekBackup} onRecoverPhotos={()=>restoreWeekBackup(recoveredAugustWeek).catch(()=>alert('사진 기록 복구에 실패했습니다. 인터넷 연결을 확인해주세요.'))} onRestore={restoreBackup} onBack={()=>setPage("weekly")} onOpen={s=>{setDate(s);setCalendarDate(s);setPage("weekly")}}/>;
 
   if(weeks.some(w=>w.start===week.start&&w.deleted))return <main className="container"><h1>삭제된 주간 기록입니다.</h1><p>다른 주의 기록은 그대로 유지됩니다.</p><button onClick={()=>setPage('history')}>주간 기록 목록</button><button onClick={()=>shiftWeek(1)}>다음 주 →</button></main>;
   return <div className="app">
     <header className="topbar">
       <div className="brand"><div className="star"><img src="/rowoon-symbol.png" alt="로운 심벌"/></div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 식자재 수불대장</div></div></div>
-      <div className="header-actions"><span className={`save-state ${saveStateClass}`}>● {saveState}</span><button className="ghost" onClick={()=>setHelp(true)}>?</button><button className="ghost" onClick={()=>setPage("history")}>주간 기록</button><button className="ghost" onClick={()=>setPage("items")}>품목 관리</button></div>
+      <div className="header-actions"><span className={`save-state ${saveStateClass}`}>● {saveState}</span><button className="ghost" onClick={()=>setHelp(true)}>?</button><button className="ghost" onClick={()=>setPage("history")}>주간 기록</button><button className="ghost" onClick={()=>setPage("items")}>품목 관리</button><button className="restart-week" disabled={!cloudReady||deletingWeek} onClick={restartFromCurrentWeek}>이 주 기준으로 다시 시작</button></div>
     </header>
 
     <main className="container">
@@ -633,9 +637,9 @@ function ItemPage({items,editable,onUnlock,onBack,onAdd,onEdit,onToggle,onDelete
   <div className="toolbar simple"><div className="search">⌕<input placeholder="품목 검색" value={q} onChange={e=>setQ(e.target.value)}/></div><div className="tabs">{["전체",...CATEGORIES].map(c=><button className={cat===c?"active":""} onClick={()=>setCat(c)} key={c}>{c}</button>)}</div></div>
   <div className="master-list">{list.map(i=><div className={`master-row ${i.active?"":"inactive-row"}`} key={i.id}><div className="order"><button disabled={!editable} title="위로" onClick={()=>onReorder(i.id,-1)}>↑</button><button disabled={!editable} title="아래로" onClick={()=>onReorder(i.id,1)}>↓</button></div><div className="master-name"><b>{i.name}</b><span>{i.category}</span></div><span className="master-unit">{i.unit||"단위 미입력"}</span><span>{i.storage_method}</span><span className={i.active?"status-on":"status-off"}>{i.active?"사용 중":"숨김"}</span><div className="master-actions"><button disabled={!editable} onClick={()=>onEdit(i)}>수정</button><button disabled={!editable} onClick={()=>onToggle(i.id,!i.active)}>{i.active?"숨기기":"다시 사용"}</button><button disabled={!editable} className="danger-text" onClick={()=>onDelete(i)}>삭제</button></div></div>)}{!list.length&&<div className="empty">조건에 맞는 품목이 없습니다.</div>}</div></main></div>
 }
-function HistoryPage({weeks,onBack,onOpen,onBackup,onRestore,onDelete,deleting,onBackupWeek,onRecoverPhotos,onRestart}){
+function HistoryPage({weeks,onBack,onOpen,onBackup,onRestore,onDelete,deleting,onBackupWeek,onRecoverPhotos}){
   const list=weeks.filter(w=>w.start>=FIRST_WEEK&&!w.deleted).sort((a,b)=>b.start.localeCompare(a.start)),fileRef=useRef(null);
-  return <div className="app"><header className="topbar"><div className="brand"><div className="star"><img src="/rowoon-symbol.png" alt="로운 심벌"/></div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 기록</div></div></div><button className="ghost" onClick={onBack}>← 주간 수불대장</button></header><main className="container"><div className="page-head"><div><h1>주간 기록</h1><p>작성했던 주간 수불대장을 다시 열거나 전체 자료를 안전하게 백업할 수 있습니다.</p></div><div className="backup-actions"><button disabled={deleting} className="danger-text" onClick={onRestart}>8/10 기준 다시 시작</button><button disabled={deleting} onClick={onRecoverPhotos}>8/10~14 사진 기록 복구</button><button className="backup-save" onClick={onBackup}>⬇ 전체 백업 저장</button><button onClick={()=>fileRef.current?.click()}>↥ 백업 불러오기</button><input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={e=>{const file=e.target.files?.[0];if(file)onRestore(file);e.target.value=""}}/></div></div><div className="backup-guide">백업파일에는 품목, 입고수량, 사용량, 재고현황과 모든 주차 기록이 포함됩니다.</div><div className="history-list">{list.map(w=><div key={w.start} className="history-entry"><button disabled={deleting} onClick={()=>onOpen(w.start)}><span>주간 수불대장</span><b>{fmtDate(w.start)} ~ {fmtDate(w.end)}</b><span>열기 →</span></button><button disabled={deleting} className="week-backup" onClick={()=>onBackupWeek(w.start)}>백업</button><button disabled={deleting} className="danger-text" onClick={()=>onDelete(w.start)}>삭제</button></div>)}{!list.length&&<div className="empty">아직 작성된 주간 기록이 없습니다.</div>}</div></main></div>
+  return <div className="app"><header className="topbar"><div className="brand"><div className="star"><img src="/rowoon-symbol.png" alt="로운 심벌"/></div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 기록</div></div></div><button className="ghost" onClick={onBack}>← 주간 수불대장</button></header><main className="container"><div className="page-head"><div><h1>주간 기록</h1><p>작성했던 주간 수불대장을 다시 열거나 전체 자료를 안전하게 백업할 수 있습니다.</p></div><div className="backup-actions"><button disabled={deleting} onClick={onRecoverPhotos}>8/10~14 사진 기록 복구</button><button className="backup-save" onClick={onBackup}>⬇ 전체 백업 저장</button><button onClick={()=>fileRef.current?.click()}>↥ 백업 불러오기</button><input ref={fileRef} hidden type="file" accept="application/json,.json" onChange={e=>{const file=e.target.files?.[0];if(file)onRestore(file);e.target.value=""}}/></div></div><div className="backup-guide">백업파일에는 품목, 입고수량, 사용량, 재고현황과 모든 주차 기록이 포함됩니다.</div><div className="history-list">{list.map(w=><div key={w.start} className="history-entry"><button disabled={deleting} onClick={()=>onOpen(w.start)}><span>주간 수불대장</span><b>{fmtDate(w.start)} ~ {fmtDate(w.end)}</b><span>열기 →</span></button><button disabled={deleting} className="week-backup" onClick={()=>onBackupWeek(w.start)}>백업</button><button disabled={deleting} className="danger-text" onClick={()=>onDelete(w.start)}>삭제</button></div>)}{!list.length&&<div className="empty">아직 작성된 주간 기록이 없습니다.</div>}</div></main></div>
 }
 function Help({onClose}){return <div className="overlay"><div className="help modal"><div className="modal-head"><h2>처음 사용하시나요?</h2><button onClick={onClose}>×</button></div><ol><li>품목은 한 번만 등록하면 됩니다.</li><li>주차를 열면 월~금이 자동으로 계산됩니다.</li><li>지난주 재고현황이 이번 주 기초재고로 자동 이월됩니다.</li><li>입고와 월~금 사용량은 정수뿐 아니라 <b>0.5, 1/4, 1 1/4</b>처럼 소수와 분수로도 입력할 수 있습니다.</li><li>재고현황은 자동 계산되며 실제 재고와 다르면 직접 수정할 수 있습니다.</li><li>오른쪽 위 <b>인쇄 / PDF 저장</b>으로 A4 문서를 만들 수 있습니다.</li></ol><div className="modal-actions"><button className="primary" onClick={onClose}>확인</button></div></div></div>}
 
