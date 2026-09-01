@@ -435,6 +435,10 @@ function App(){
       <div className="footer-note">입력 내용은 공용 저장소에 자동 저장됩니다. 다른 컴퓨터에서도 같은 자료를 확인할 수 있습니다.</div>
     </main>
 
+    <footer className="print-logo" aria-hidden="true">
+      <img src="/rowoon-center-logo-footer.png" alt=""/>
+    </footer>
+
     {modal?.type==="item"&&<ItemModal data={modal.data} defaults={modal.defaults} onClose={()=>setModal(null)} onSave={modal.data?updateItem:addItem}/>} 
     {help&&<Help onClose={()=>{setHelp(false);save(STORAGE.help,true)}}/>}
   </div>;

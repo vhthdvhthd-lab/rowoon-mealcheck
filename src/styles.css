@@ -451,17 +451,31 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
   /* 비고 제목 아래 설명은 작게 유지하고, 실제 작성 내용만 왼쪽 데이터 칸과 통일 */
   .inventory .note-col small{font-size:6.5px!important;line-height:1.15!important;font-weight:700!important}
   .inventory .note-cell .note{font-size:10px!important;font-weight:400!important;letter-spacing:0!important}
+  .inventory .incoming-qty-cell .incoming-qty{font-size:10px!important;font-weight:400!important;letter-spacing:0!important}
 }
 
-/* 고해상도 로고를 모든 인쇄 페이지 오른쪽 아래 여백에 반복 */
+/* 고해상도 로고를 모든 인쇄 페이지 오른쪽 아래에 반복 */
 @media print{
   @page{
     size:A4 landscape;
     margin:15mm 7mm 15mm 19mm;
-    @bottom-right{
-      content:url("/rowoon-center-logo-print.svg");
-      vertical-align:middle;
-    }
   }
-  .print-logo{display:none!important}
+  .print-logo{
+    display:block!important;
+    position:fixed!important;
+    right:7mm!important;
+    bottom:4mm!important;
+    width:28mm!important;
+    height:auto!important;
+    margin:0!important;
+    padding:0!important;
+    z-index:9999!important;
+  }
+  .print-logo img{
+    display:block!important;
+    width:28mm!important;
+    max-width:28mm!important;
+    height:auto!important;
+    object-fit:contain!important;
+  }
 }
