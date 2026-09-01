@@ -463,8 +463,8 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
   .print-logo{
     display:block!important;
     position:fixed!important;
-    right:7mm!important;
-    bottom:4mm!important;
+    right:0!important;
+    bottom:-11mm!important;
     width:28mm!important;
     height:auto!important;
     margin:0!important;
