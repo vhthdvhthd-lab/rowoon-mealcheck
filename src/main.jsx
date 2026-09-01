@@ -147,6 +147,17 @@ function App(){
   const maxSaveTimer=useRef(null);
   const latestCloudState=useRef(null);
   const savingCloud=useRef(false);
+  const [undoState,setUndoState]=useState(null);
+  useEffect(()=>setUndoState(null),[date]);
+  function rememberChange(){setUndoState({week:week.start,records,incoming})}
+  function undoChange(){
+    if(!undoState||undoState.week!==week.start)return;
+    setRecords(undoState.records);setIncoming(undoState.incoming);setUndoState(null);
+  }
+  function deleteWeekItem(item){
+    if(!confirm(`'${item.name}'을 현재 주에서만 삭제할까요?\n다른 주의 기록과 품목 목록은 그대로 유지됩니다.`))return;
+    patchRecord(item.id,{deleted:true});
+  }
 
   useEffect(()=>{
     let cancelled=false;
@@ -250,6 +261,7 @@ function App(){
 
   function previousWeek(s){const d=parseLocal(s);d.setDate(d.getDate()-7);return isoDate(d)}
   function patchRecord(itemId,patch){
+    rememberChange();
     setSaveState("저장 중...");
     setRecords(prev=>{const next=prev.map(r=>r.weekly_record_id===week.start&&r.item_id===itemId?
       {...r,...patch,updated_at:new Date().toISOString()}:r);save(STORAGE.records,next);return next});
@@ -269,6 +281,7 @@ function App(){
   }
 
   const visible=useMemo(()=>activeItems.filter(i=>{
+    if(recordFor(i).deleted)return false;
     if(filter!=="기한 임박"&&category!=="전체"&&i.category!==category)return false;
     if(search&&!i.name.toLowerCase().includes(search.toLowerCase()))return false;
     const r=recordFor(i), st=effectiveStock(r), inc=totalIncoming(i.id);
@@ -281,10 +294,10 @@ function App(){
 
   const summary=useMemo(()=>{
     let no=0,check=0,near=0;
-    activeItems.forEach(i=>{const r=recordFor(i),s=numeric(effectiveStock(r)); if(s===0)no++; if(s<0)check++; if(expiryStatus(expirationFor(i,r))==="임박")near++;});
-    return {total:activeItems.length,no,check,near};
+    activeItems.filter(i=>!recordFor(i).deleted).forEach(i=>{const r=recordFor(i),s=numeric(effectiveStock(r)); if(s===0)no++; if(s<0)check++; if(expiryStatus(expirationFor(i,r))==="임박")near++;});
+    return {total:activeItems.filter(i=>!recordFor(i).deleted).length,no,check,near};
   },[activeItems,records,incoming,week.start]);
-  const printExpiryItems=useMemo(()=>activeItems.filter(item=>item.category===category).map(item=>{
+  const printExpiryItems=useMemo(()=>activeItems.filter(item=>item.category===category&&!recordFor(item).deleted).map(item=>{
     const record=recordFor(item),expiration=expirationFor(item,record);
     return expiryStatus(expiration)==="임박"?`${item.name}(${fmtShortDate(expiration)})`:null;
   }).filter(Boolean),[activeItems,category,records,week.start]);
@@ -332,6 +345,7 @@ function App(){
     setItems(arr.map((i,n)=>({...i,sort_order:n})));
   }
   function patchIncoming(itemId,patch){
+    rememberChange();
     setIncoming(prev=>{
       const found=prev.find(x=>x.weekly_record_id===week.start&&x.item_id===itemId);
       const next=found?prev.map(x=>x.id===found.id?{...x,...patch}:x):[...prev,{id:uid(),weekly_record_id:week.start,item_id:itemId,incoming_date:"",quantity:"",created_at:new Date().toISOString(),...patch}];
@@ -339,6 +353,8 @@ function App(){
     });
   }
   function copyLastWeek(){
+    if(!confirm('현재 주의 기초재고를 지난주 잔여 재고로 다시 불러올까요?\n현재 주의 입고수량·사용량·날짜는 변경하지 않습니다.'))return;
+    rememberChange();
     const prevStart=previousWeek(week.start);
     setRecords(rs=>rs.map(r=>{
       if(r.weekly_record_id!==week.start)return r;
@@ -350,17 +366,6 @@ function App(){
       const v=numeric(calculated)===0?"":calculated;
       return {...r,opening_stock:v,updated_at:new Date().toISOString()};
     }));
-    setIncoming(prev=>{
-      let next=[...prev];
-      activeItems.forEach(item=>{
-        const prior=prev.find(x=>x.weekly_record_id===prevStart&&x.item_id===item.id&&x.incoming_date);
-        if(!prior)return;
-        const current=next.find(x=>x.weekly_record_id===week.start&&x.item_id===item.id);
-        if(current) next=next.map(x=>x.id===current.id?{...x,incoming_date:prior.incoming_date}:x);
-        else next.push({id:uid(),weekly_record_id:week.start,item_id:item.id,incoming_date:prior.incoming_date,quantity:"",created_at:new Date().toISOString()});
-      });
-      return next;
-    });
     setSaveState("지난주 내용 불러옴");
     setTimeout(()=>setSaveState("저장됨"),1200);
   }
@@ -398,7 +403,7 @@ function App(){
     <main className="container">
       <section className="title-row">
         <div><h1>이번 주 식자재 수불대장</h1><div className="range">{fmtRange(week)}</div><div className="print-category">분류: {category}</div></div>
-        <div className="title-right-stack"><div className="title-utility"><button onClick={printNow}>🖨 인쇄 / PDF 저장</button><input className="title-date" aria-label="날짜 선택" type="date" value={calendarDate} onChange={e=>{if(!e.target.value)return;setCalendarDate(e.target.value);setDate(isoDate(mondayOf(parseLocal(e.target.value))))}}/></div><div className="filters"><div className="search">⌕<input placeholder="품목 검색" value={search} onChange={e=>setSearch(e.target.value)}/></div>{["전체","이번 주 입고","재고 없음","재고 확인"].map(f=><button className={filter===f?"filter active-filter":"filter"} onClick={()=>setFilter(f)} key={f}>{f}</button>)}</div></div>
+        <div className="title-right-stack"><div className="title-utility"><button onClick={printNow}>🖨 인쇄 / PDF 저장</button><input className="title-date" aria-label="날짜 선택" type="date" value={calendarDate} onChange={e=>{if(!e.target.value)return;setCalendarDate(e.target.value);setDate(isoDate(mondayOf(parseLocal(e.target.value))))}}/></div><div className="filters"><div className="search">⌕<input placeholder="품목 검색" value={search} onChange={e=>setSearch(e.target.value)}/></div>{["전체","이번 주 입고","재고 없음","재고 확인"].map(f=><button className={filter===f?"filter active-filter":"filter"} onClick={()=>setFilter(f)} key={f}>{f}</button>)}<button className="filter" disabled={!editPin} onClick={copyLastWeek}>↻ 이월 재고 다시 불러오기</button></div></div>
         <section className="print-approval" aria-label="결재란">
           <div className="approval-title">결<br/><br/>재</div>
           {['담 당','팀 장','국 장','센 터 장'].map(role=><div className="approval-cell" key={role}><span>{role}</span><i></i></div>)}
@@ -418,7 +423,7 @@ function App(){
           <button onClick={()=>shiftWeek(-1)}>← 이전 주</button>
           <button className="today" onClick={()=>{setDate(isoDate(mondayOf(new Date())));setCalendarDate(isoDate(new Date()))}}>이번 주</button>
           <button onClick={()=>shiftWeek(1)}>다음 주 →</button>
-          <button disabled={!editPin} onClick={copyLastWeek}>↻ 지난주 재고 불러오기</button>
+          <button disabled={!undoState||undoState.week!==week.start} onClick={undoChange}>↶ 마지막 변경 되돌리기</button>
           <button disabled={!editPin} className="primary" onClick={()=>addBlankItem(category)}>＋ 품목 추가</button>
         </div>
       </section>
@@ -427,7 +432,7 @@ function App(){
 
       <InventoryTable items={visible} records={records} incoming={incoming} week={week} patchRecord={patchRecord} patchItem={patchItem}
         getIncoming={getIncoming} totalIncoming={totalIncoming} patchIncoming={patchIncoming}
-        expirationFor={expirationFor} expiryStatus={expiryStatus} effectiveStock={effectiveStock} onDelete={deleteItem} showCategory={filter==="기한 임박"} editable={!!editPin}
+        expirationFor={expirationFor} expiryStatus={expiryStatus} effectiveStock={effectiveStock} onDelete={deleteWeekItem} showCategory={filter==="기한 임박"} editable={!!editPin}
         onAdd={()=>addBlankItem(category)}/>
 
       {printExpiryItems.length>0&&<div className="print-expiry-note">*기한임박: {printExpiryItems.join(", ")}.</div>}
