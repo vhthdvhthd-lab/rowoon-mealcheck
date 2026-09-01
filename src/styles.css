@@ -474,3 +474,7 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
   }
   .print-logo{display:none!important}
 }
+.history-entry{display:flex;gap:8px;align-items:stretch}
+.history-entry>button:first-child{flex:1;min-width:0}
+.history-entry>button.danger-text{display:block;flex:0 0 64px;padding:8px}
+.history-entry>button.week-backup{display:block;flex:0 0 64px;padding:8px;color:#1d4ed8;background:#eff6ff;border-color:#bfdbfe;font-weight:700}
