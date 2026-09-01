@@ -60,7 +60,7 @@ function DateFields({value="",onChange,disabled=false,label="날짜"}){
     if(digits.length===6) onChange(`20${digits.slice(0,2)}-${digits.slice(2,4)}-${digits.slice(4,6)}`);
     else if(!digits.length) onChange("");
   };
-  return <input className="date-full-input screen-date" disabled={disabled} inputMode="numeric" aria-label={label} value={text} maxLength={8} placeholder="26.02.04" onFocus={e=>e.target.select()} onChange={e=>update(e.target.value)}/>;
+  return <input className="date-full-input screen-date" disabled={disabled} inputMode="numeric" aria-label={label} value={text} maxLength={8} placeholder="" onFocus={e=>e.target.select()} onChange={e=>update(e.target.value)}/>;
 }
 function isoDate(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -492,7 +492,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
       const ins=getIncoming(item.id), total=totalIncoming(item.id), st=effectiveStock(r), status=expiryStatus(expirationFor(item,r));
       return <tr key={item.id}>
         <td className="sticky-col item-name"><input autoFocus={!item.name} disabled={!editable} className="item-name-input" aria-label={`${item.name||"새 품목"} 품목명 수정`} value={item.name} onChange={e=>patchItem(item.id,{name:e.target.value})}/>{showCategory&&<span className="item-category-badge">{item.category}</span>}</td>
-        <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="단위" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
+        <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
         <td><input disabled={!editable} className="num" value={r.opening_stock??""} onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
         <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><DateFields disabled={!editable} label={`${item.name} 입고일자`} value={ins[0]?.incoming_date||""} onChange={value=>patchIncoming(item.id,{incoming_date:value})}/><span className="print-date">{ins[0]?.incoming_date?fmtShortDate(ins[0].incoming_date):""}</span></td>
         <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량과 추가 입고일자`} className="incoming-qty" value={ins[0]?.quantity||""} placeholder="" onChange={e=>patchIncoming(item.id,{quantity:formatIncomingQuantity(e.target.value)})}/></td>
@@ -507,7 +507,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
           {status&&<span className={"expiry "+(status==="임박"?"near":status==="기한 지남"?"passed":"ok")}>{status}</span>}
         </td>
         <td><select disabled={!editable} value={r.storage_method||item.storage_method} onChange={e=>patchRecord(item.id,{storage_method:e.target.value})}>{STORAGE_METHODS.map(x=><option key={x}>{x}</option>)}</select></td>
-        <td className="note-cell"><input disabled={!editable} className="note" value={r.note??""} placeholder="추가 입고 기한 또는 메모" onChange={e=>patchRecord(item.id,{note:e.target.value})}/></td>
+        <td className="note-cell"><input disabled={!editable} className="note" value={r.note??""} placeholder="" onChange={e=>patchRecord(item.id,{note:e.target.value})}/></td>
         <td className="delete-cell"><button disabled={!editable} title={`${item.name} 삭제`} aria-label={`${item.name} 삭제`} onClick={()=>onDelete(item)}>삭제</button></td>
       </tr>
     })}</tbody>
@@ -529,7 +529,7 @@ function ItemModal({data,defaults,onClose,onSave}){
   </Modal>
 }
 function IncomingModal({item,data,onClose,onSave}){const [form,setForm]=useState(data);return <Modal title={`${item?.name||""} · 입고 추가`} onClose={onClose}>
-  <div className="form-grid"><label>입고일<DateFields value={form.date} onChange={date=>setForm({...form,date})}/></label><label>입고수량<input autoFocus value={form.quantity} onChange={e=>setForm({...form,quantity:e.target.value})} placeholder="예: 30"/></label></div>
+  <div className="form-grid"><label>입고일<DateFields value={form.date} onChange={date=>setForm({...form,date})}/></label><label>입고수량<input autoFocus value={form.quantity} onChange={e=>setForm({...form,quantity:e.target.value})} placeholder=""/></label></div>
   <div className="modal-actions"><button onClick={onClose}>취소</button><button className="primary" onClick={()=>onSave(form)}>입고 추가</button></div>
 </Modal>}
 function Modal({title,onClose,children}){return <div className="overlay"><div className="modal"><div className="modal-head"><h2>{title}</h2><button onClick={onClose}>×</button></div>{children}</div></div>}
