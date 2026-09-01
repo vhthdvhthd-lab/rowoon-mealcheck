@@ -79,6 +79,20 @@ function fmtDate(s){if(!s)return ""; const d=parseLocal(s); return `${d.getFullY
 function fmtShortDate(s){if(!s)return ""; const [y,m,d]=s.split("-"); return `${String(y).slice(-2)}.${m}.${d}`}
 function fmtRange(w){return `${w.startDate.getFullYear()}년 ${w.startDate.getMonth()+1}월 ${w.startDate.getDate()}일 ~ ${w.endDate.getMonth()+1}월 ${w.endDate.getDate()}일`}
 function displayNum(v){ if(v==null||v==="")return ""; const n=Number(v); return Number.isFinite(n)?String(Number(n.toFixed(4))):String(v)}
+function formatIncomingQuantity(value){
+  const raw=String(value??"");
+  const openIndex=raw.lastIndexOf("(");
+  if(openIndex<0)return raw;
+  const quantity=raw.slice(0,openIndex+1);
+  const digits=raw.slice(openIndex+1).replace(/\D/g,"").slice(0,6);
+  const date=digits.length<=2
+    ? digits
+    : digits.length<=4
+      ? `${digits.slice(0,2)}.${digits.slice(2)}`
+      : `${digits.slice(0,2)}.${digits.slice(2,4)}.${digits.slice(4)}`;
+  const hasClosingParenthesis=raw.slice(openIndex+1).includes(")");
+  return `${quantity}${date}${hasClosingParenthesis?")":""}`;
+}
 function numeric(v){
   if(v==null||v==="") return 0;
   if(typeof v==="number") return v;
@@ -275,6 +289,11 @@ function App(){
     const record=recordFor(item),expiration=expirationFor(item,record);
     return expiryStatus(expiration)==="임박"?`${item.name}(${fmtShortDate(expiration)})`:null;
   }).filter(Boolean),[activeItems,category,records,week.start]);
+  const saveStateClass=saveState.includes("실패")
+    ? "save-error"
+    : /(저장됨|저장 완료|연결됨|복원됨)/.test(saveState)
+      ? "save-success"
+      : "save-working";
 
   function addItem(data){
     const item={...data,id:uid(),active:true,sort_order:items.length,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
@@ -374,7 +393,7 @@ function App(){
   return <div className="app">
     <header className="topbar">
       <div className="brand"><div className="star"><img src="/rowoon-symbol.png" alt="로운 심벌"/></div><div><div className="brand-name">로운주간이용센터</div><div className="brand-sub">주간 식자재 수불대장</div></div></div>
-      <div className="header-actions"><span className="save-state">● {saveState}</span><button className="ghost" onClick={()=>setHelp(true)}>?</button><button className="ghost" onClick={()=>setPage("history")}>주간 기록</button><button className="ghost" onClick={()=>setPage("items")}>품목 관리</button></div>
+      <div className="header-actions"><span className={`save-state ${saveStateClass}`}>● {saveState}</span><button className="ghost" onClick={()=>setHelp(true)}>?</button><button className="ghost" onClick={()=>setPage("history")}>주간 기록</button><button className="ghost" onClick={()=>setPage("items")}>품목 관리</button></div>
     </header>
 
     <main className="container">
@@ -414,10 +433,10 @@ function App(){
 
       {printExpiryItems.length>0&&<div className="print-expiry-note">*기한임박: {printExpiryItems.join(", ")}.</div>}
 
+      <footer className="print-logo" aria-label="인쇄용 로운주간이용센터 로고"><img src={printFooterLogo} alt="사회적협동조합 로운주간이용센터"/></footer>
+
       <div className="footer-note">입력 내용은 공용 저장소에 자동 저장됩니다. 다른 컴퓨터에서도 같은 자료를 확인할 수 있습니다.</div>
     </main>
-
-    <footer className="print-logo" aria-label="인쇄용 로운주간이용센터 로고"><img src={printFooterLogo} alt="사회적협동조합 로운주간이용센터"/></footer>
 
     {modal?.type==="item"&&<ItemModal data={modal.data} defaults={modal.defaults} onClose={()=>setModal(null)} onSave={modal.data?updateItem:addItem}/>} 
     {help&&<Help onClose={()=>{setHelp(false);save(STORAGE.help,true)}}/>}
@@ -474,7 +493,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
         <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="단위" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
         <td><input disabled={!editable} className="num" value={r.opening_stock??""} onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
         <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><DateFields disabled={!editable} label={`${item.name} 입고일자`} value={ins[0]?.incoming_date||""} onChange={value=>patchIncoming(item.id,{incoming_date:value})}/><span className="print-date">{ins[0]?.incoming_date?fmtShortDate(ins[0].incoming_date):""}</span></td>
-        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량과 추가 입고일자`} className="incoming-qty" value={ins[0]?.quantity||""} placeholder="5(26.08.25)" onChange={e=>patchIncoming(item.id,{quantity:e.target.value})}/></td>
+        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량과 추가 입고일자`} className="incoming-qty" value={ins[0]?.quantity||""} placeholder="5(26.08.25)" onChange={e=>patchIncoming(item.id,{quantity:formatIncomingQuantity(e.target.value)})}/></td>
         {DAYS.map(d=><td className="usage-cell" key={d}><input disabled={!editable} className="num usage-input" value={r[d+"_usage"]??""} onChange={e=>patchRecord(item.id,{[d+"_usage"]:e.target.value})}/></td>)}
         <td className="stock-cell"><input disabled={!editable} className={`stock ${numeric(st)<0?"negative":numeric(st)===0?"zero":""}`} value={r.manual_stock!==""&&r.manual_stock!=null?r.manual_stock:(st==null?"직접 확인":displayNum(st))}
           onChange={e=>patchRecord(item.id,{manual_stock:e.target.value})}/>
