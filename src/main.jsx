@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-import printFooterLogo from "./rowoon-center-logo-footer.png";
 
 const STORAGE = {
   items: "rowoon_inventory_items_v1",
@@ -433,8 +432,6 @@ function App(){
 
       {printExpiryItems.length>0&&<div className="print-expiry-note">*기한임박: {printExpiryItems.join(", ")}.</div>}
 
-      <footer className="print-logo" aria-label="인쇄용 로운주간이용센터 로고"><img src={printFooterLogo} alt="사회적협동조합 로운주간이용센터"/></footer>
-
       <div className="footer-note">입력 내용은 공용 저장소에 자동 저장됩니다. 다른 컴퓨터에서도 같은 자료를 확인할 수 있습니다.</div>
     </main>
 
@@ -493,7 +490,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
         <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="단위" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
         <td><input disabled={!editable} className="num" value={r.opening_stock??""} onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
         <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><DateFields disabled={!editable} label={`${item.name} 입고일자`} value={ins[0]?.incoming_date||""} onChange={value=>patchIncoming(item.id,{incoming_date:value})}/><span className="print-date">{ins[0]?.incoming_date?fmtShortDate(ins[0].incoming_date):""}</span></td>
-        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량과 추가 입고일자`} className="incoming-qty" value={ins[0]?.quantity||""} placeholder="5(26.08.25)" onChange={e=>patchIncoming(item.id,{quantity:formatIncomingQuantity(e.target.value)})}/></td>
+        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량과 추가 입고일자`} className="incoming-qty" value={ins[0]?.quantity||""} placeholder="" onChange={e=>patchIncoming(item.id,{quantity:formatIncomingQuantity(e.target.value)})}/></td>
         {DAYS.map(d=><td className="usage-cell" key={d}><input disabled={!editable} className="num usage-input" value={r[d+"_usage"]??""} onChange={e=>patchRecord(item.id,{[d+"_usage"]:e.target.value})}/></td>)}
         <td className="stock-cell"><input disabled={!editable} className={`stock ${numeric(st)<0?"negative":numeric(st)===0?"zero":""}`} value={r.manual_stock!==""&&r.manual_stock!=null?r.manual_stock:(st==null?"직접 확인":displayNum(st))}
           onChange={e=>patchRecord(item.id,{manual_stock:e.target.value})}/>
