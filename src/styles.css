@@ -122,8 +122,13 @@
 .form-grid .date-parts{height:40px;width:100%;justify-content:flex-start;padding-left:10px}
 .form-grid .date-parts input:nth-of-type(1){width:42px!important}
 .form-grid .date-parts input:nth-of-type(2),.form-grid .date-parts input:nth-of-type(3){width:24px!important}
-.incoming-qty-cell{min-width:82px}
-.incoming-qty{width:72px!important}
+.incoming-qty-cell{min-width:126px}
+.incoming-qty{width:116px!important;text-align:center!important}
+.usage-col,.usage-cell{width:68px;min-width:68px}
+.usage-input{width:58px!important}
+.note-col,.note-cell{width:210px;min-width:210px}
+.note-col small{display:block;margin-top:2px;font-size:10px;font-weight:700}
+.note-cell .note{width:196px!important}
 .item-name-input{width:100%!important;border-color:transparent!important;background:transparent!important;text-align:center;font-weight:800;padding-left:4px!important;padding-right:4px!important}
 .item-name-input:hover,.item-name-input:focus{border-color:#dfe3eb!important;background:#fff!important;outline:none}
 .inventory .table-add-footer td{padding:10px!important;background:#f8faff;border-bottom:0;text-align:center}
@@ -137,6 +142,11 @@
   .item-name{text-align:center!important;padding-left:2px!important;padding-right:2px!important}
   .incoming-date-cell,.incoming-qty-cell{min-width:0!important}
   .incoming-qty{width:100%!important;text-align:center!important}
+  .usage-col,.usage-cell{width:5.6%!important;min-width:0!important}
+  .usage-input{width:100%!important}
+  .note-col,.note-cell{width:13.5%!important;min-width:0!important}
+  .note-col small{font-size:6.5px!important}
+  .note-cell .note{width:100%!important}
 }
 
 @media print{
@@ -377,10 +387,6 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
   @page{
     size:A4 landscape;
     margin:15mm 7mm 15mm 19mm;
-    @bottom-right{
-      content:url("/rowoon-center-logo-footer.png");
-      vertical-align:middle;
-    }
   }
 
   .table-wrap{
@@ -405,9 +411,26 @@ button:disabled,input:disabled,select:disabled{cursor:not-allowed;opacity:.62}
     page-break-after:auto!important;
   }
 
-  /* DOM 고정 로고는 사용하지 않고 @page 하단 꼬리말에서만 반복합니다. */
+  /* 로고를 파일 주소로 다시 요청하지 않고 인쇄 여백 안에 고정해 매 페이지 반복합니다. */
   .print-logo{
-    display:none!important;
+    display:flex!important;
+    position:fixed!important;
+    right:0!important;
+    bottom:-11mm!important;
+    width:30mm!important;
+    height:7mm!important;
+    margin:0!important;
+    padding:0!important;
+    justify-content:flex-end!important;
+    align-items:center!important;
+    z-index:999!important;
+  }
+  .print-logo img{
+    display:block!important;
+    width:28mm!important;
+    max-width:28mm!important;
+    height:auto!important;
+    object-fit:contain!important;
   }
   .print-expiry-note,
   .approval-title,

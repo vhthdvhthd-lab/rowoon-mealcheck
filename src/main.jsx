@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
+import printFooterLogo from "./rowoon-center-logo-footer.png";
 
 const STORAGE = {
   items: "rowoon_inventory_items_v1",
@@ -46,16 +47,21 @@ function load(key, fallback) {
 function save(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 function uid(){return crypto.randomUUID();}
 function DateFields({value="",onChange,disabled=false,label="날짜"}){
-  const [text,setText]=useState(String(value||""));
-  useEffect(()=>setText(String(value||"")),[value]);
+  const shortValue=v=>{
+    if(!v)return "";
+    const match=String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match?`${match[1].slice(-2)}.${match[2]}.${match[3]}`:String(v);
+  };
+  const [text,setText]=useState(shortValue(value));
+  useEffect(()=>setText(shortValue(value)),[value]);
   const update=raw=>{
-    const digits=raw.replace(/\D/g,"").slice(0,8);
-    const formatted=digits.length<=4?digits:digits.length<=6?`${digits.slice(0,4)}-${digits.slice(4)}`:`${digits.slice(0,4)}-${digits.slice(4,6)}-${digits.slice(6)}`;
+    const digits=raw.replace(/\D/g,"").slice(0,6);
+    const formatted=digits.length<=2?digits:digits.length<=4?`${digits.slice(0,2)}.${digits.slice(2)}`:`${digits.slice(0,2)}.${digits.slice(2,4)}.${digits.slice(4)}`;
     setText(formatted);
-    if(digits.length===8) onChange(formatted);
+    if(digits.length===6) onChange(`20${digits.slice(0,2)}-${digits.slice(2,4)}-${digits.slice(4,6)}`);
     else if(!digits.length) onChange("");
   };
-  return <input className="date-full-input screen-date" disabled={disabled} inputMode="numeric" aria-label={label} value={text} maxLength={10} onFocus={e=>e.target.select()} onChange={e=>update(e.target.value)}/>;
+  return <input className="date-full-input screen-date" disabled={disabled} inputMode="numeric" aria-label={label} value={text} maxLength={8} placeholder="26.02.04" onFocus={e=>e.target.select()} onChange={e=>update(e.target.value)}/>;
 }
 function isoDate(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -77,6 +83,8 @@ function numeric(v){
   if(v==null||v==="") return 0;
   if(typeof v==="number") return v;
   const s=String(v).trim().replace(/,/g,"");
+  const annotated=s.match(/^(.+?)\s*\(\s*\d{2,4}[.\-/]\d{1,2}[.\-/]\d{1,2}\s*\)$/);
+  if(annotated) return numeric(annotated[1]);
   if(/^[-+]?\d*\.?\d+$/.test(s)) return Number(s);
   const mixed=s.match(/^(-?\d+)\s+(\d+)\s*\/\s*(\d+)$/);
   if(mixed){
@@ -409,7 +417,7 @@ function App(){
       <div className="footer-note">입력 내용은 공용 저장소에 자동 저장됩니다. 다른 컴퓨터에서도 같은 자료를 확인할 수 있습니다.</div>
     </main>
 
-    <footer className="print-logo" aria-label="인쇄용 로운주간이용센터 로고"><img src="/rowoon-center-logo.png" alt="사회적협동조합 로운주간이용센터"/></footer>
+    <footer className="print-logo" aria-label="인쇄용 로운주간이용센터 로고"><img src={printFooterLogo} alt="사회적협동조합 로운주간이용센터"/></footer>
 
     {modal?.type==="item"&&<ItemModal data={modal.data} defaults={modal.defaults} onClose={()=>setModal(null)} onSave={modal.data?updateItem:addItem}/>} 
     {help&&<Help onClose={()=>{setHelp(false);save(STORAGE.help,true)}}/>}
@@ -456,7 +464,7 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
   return <div className="table-wrap"><table className="inventory">
     <thead><tr>
       <th className="sticky-col item-col">품목명</th><th>단위</th><th>기초재고<br/>(전주이월)</th><th>입고일자</th><th>입고수량</th>
-      {DAY_LABELS.map(d=><th key={d}>{d} 사용량</th>)}<th>재고현황</th><th>유통기한<br/>/ 소비기한</th><th>보관방법</th><th>비고</th><th className="delete-col">삭제</th>
+      {DAY_LABELS.map(d=><th className="usage-col" key={d}>{d} 사용량</th>)}<th>재고현황</th><th>유통기한<br/>/ 소비기한</th><th>보관방법</th><th className="note-col">비고<br/><small>(추가 입고 기한)</small></th><th className="delete-col">삭제</th>
     </tr></thead>
     <tbody>{items.map(item=>{
       const r=records.find(x=>x.weekly_record_id===week.start&&x.item_id===item.id)||{};
@@ -465,20 +473,20 @@ function InventoryTable({items,records,incoming,week,patchRecord,patchItem,getIn
         <td className="sticky-col item-name"><input autoFocus={!item.name} disabled={!editable} className="item-name-input" aria-label={`${item.name||"새 품목"} 품목명 수정`} value={item.name} onChange={e=>patchItem(item.id,{name:e.target.value})}/>{showCategory&&<span className="item-category-badge">{item.category}</span>}</td>
         <td><input disabled={!editable} className="unit-input" value={item.unit||""} placeholder="단위" onChange={e=>patchItem(item.id,{unit:e.target.value})}/></td>
         <td><input disabled={!editable} className="num" value={r.opening_stock??""} onChange={e=>patchRecord(item.id,{opening_stock:e.target.value})}/></td>
-        <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><DateFields disabled={!editable} label={`${item.name} 입고일자`} value={ins[0]?.incoming_date||""} onChange={value=>patchIncoming(item.id,{incoming_date:value})}/><span className="print-date">{ins[0]?.incoming_date?fmtDate(ins[0].incoming_date):""}</span></td>
-        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량`} className="incoming-qty" value={ins[0]?.quantity||""} onChange={e=>patchIncoming(item.id,{quantity:e.target.value})}/></td>
-        {DAYS.map(d=><td key={d}><input disabled={!editable} className="num" value={r[d+"_usage"]??""} onChange={e=>patchRecord(item.id,{[d+"_usage"]:e.target.value})}/></td>)}
+        <td className={`incoming-date-cell ${ins[0]?.quantity&&!ins[0]?.incoming_date?"date-required":""}`}><DateFields disabled={!editable} label={`${item.name} 입고일자`} value={ins[0]?.incoming_date||""} onChange={value=>patchIncoming(item.id,{incoming_date:value})}/><span className="print-date">{ins[0]?.incoming_date?fmtShortDate(ins[0].incoming_date):""}</span></td>
+        <td className="incoming-qty-cell"><input disabled={!editable} aria-label={`${item.name} 입고수량과 추가 입고일자`} className="incoming-qty" value={ins[0]?.quantity||""} placeholder="5(26.08.25)" onChange={e=>patchIncoming(item.id,{quantity:e.target.value})}/></td>
+        {DAYS.map(d=><td className="usage-cell" key={d}><input disabled={!editable} className="num usage-input" value={r[d+"_usage"]??""} onChange={e=>patchRecord(item.id,{[d+"_usage"]:e.target.value})}/></td>)}
         <td className="stock-cell"><input disabled={!editable} className={`stock ${numeric(st)<0?"negative":numeric(st)===0?"zero":""}`} value={r.manual_stock!==""&&r.manual_stock!=null?r.manual_stock:(st==null?"직접 확인":displayNum(st))}
           onChange={e=>patchRecord(item.id,{manual_stock:e.target.value})}/>
           {r.manual_stock!==""&&r.manual_stock!=null?<span className="manual">수동 수정</span>:null}
           {numeric(st)===0&&<span className="stock-badge zero-badge">재고 없음</span>}
           {numeric(st)<0&&<span className="stock-badge neg-badge">재고 확인</span>}
         </td>
-        <td className="date-cell"><DateFields disabled={!editable} label={`${item.name} 기한`} value={expirationFor(item,r)} onChange={value=>patchRecord(item.id,item.category==="야채·채소"?{consumption_date:value}:{expiration_date:value})}/><span className="print-date">{expirationFor(item,r)?fmtDate(expirationFor(item,r)):""}</span>
+        <td className="date-cell"><DateFields disabled={!editable} label={`${item.name} 기한`} value={expirationFor(item,r)} onChange={value=>patchRecord(item.id,item.category==="야채·채소"?{consumption_date:value}:{expiration_date:value})}/><span className="print-date">{expirationFor(item,r)?fmtShortDate(expirationFor(item,r)):""}</span>
           {status&&<span className={"expiry "+(status==="임박"?"near":status==="기한 지남"?"passed":"ok")}>{status}</span>}
         </td>
         <td><select disabled={!editable} value={r.storage_method||item.storage_method} onChange={e=>patchRecord(item.id,{storage_method:e.target.value})}>{STORAGE_METHODS.map(x=><option key={x}>{x}</option>)}</select></td>
-        <td><input disabled={!editable} className="note" value={r.note??""} placeholder="메모" onChange={e=>patchRecord(item.id,{note:e.target.value})}/></td>
+        <td className="note-cell"><input disabled={!editable} className="note" value={r.note??""} placeholder="추가 입고 기한 또는 메모" onChange={e=>patchRecord(item.id,{note:e.target.value})}/></td>
         <td className="delete-cell"><button disabled={!editable} title={`${item.name} 삭제`} aria-label={`${item.name} 삭제`} onClick={()=>onDelete(item)}>삭제</button></td>
       </tr>
     })}</tbody>
