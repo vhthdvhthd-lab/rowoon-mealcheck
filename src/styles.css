@@ -124,11 +124,11 @@
 .form-grid .date-parts input:nth-of-type(2),.form-grid .date-parts input:nth-of-type(3){width:24px!important}
 .incoming-qty-cell{min-width:126px}
 .incoming-qty{width:116px!important;text-align:center!important}
-.usage-col,.usage-cell{width:68px;min-width:68px}
-.usage-input{width:58px!important}
-.note-col,.note-cell{width:210px;min-width:210px}
+.usage-col,.usage-cell{width:58px;min-width:58px}
+.usage-input{width:48px!important;padding-left:3px!important;padding-right:3px!important}
+.note-col,.note-cell{width:260px;min-width:260px}
 .note-col small{display:block;margin-top:2px;font-size:10px;font-weight:700}
-.note-cell .note{width:196px!important}
+.note-cell .note{width:246px!important}
 .item-name-input{width:100%!important;border-color:transparent!important;background:transparent!important;text-align:center;font-weight:800;padding-left:4px!important;padding-right:4px!important}
 .item-name-input:hover,.item-name-input:focus{border-color:#dfe3eb!important;background:#fff!important;outline:none}
 .inventory .table-add-footer td{padding:10px!important;background:#f8faff;border-bottom:0;text-align:center}
@@ -142,9 +142,9 @@
   .item-name{text-align:center!important;padding-left:2px!important;padding-right:2px!important}
   .incoming-date-cell,.incoming-qty-cell{min-width:0!important}
   .incoming-qty{width:100%!important;text-align:center!important}
-  .usage-col,.usage-cell{width:5.6%!important;min-width:0!important}
+  .usage-col,.usage-cell{width:4.4%!important;min-width:0!important}
   .usage-input{width:100%!important}
-  .note-col,.note-cell{width:13.5%!important;min-width:0!important}
+  .note-col,.note-cell{width:19.5%!important;min-width:0!important}
   .note-col small{font-size:6.5px!important}
   .note-cell .note{width:100%!important}
 }
