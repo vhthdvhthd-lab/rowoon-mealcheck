@@ -538,10 +538,16 @@ function App(){
 
   function shiftWeek(n){
     const d=parseLocal(week.start);d.setDate(d.getDate()+n*7);const targetStart=isoDate(d);
-    if(targetStart<FIRST_WEEK||weeks.some(w=>w.start===targetStart&&w.deleted))return;
-    if(n>0&&!weeks.some(w=>w.start===targetStart)&&!records.some(r=>r.weekly_record_id===targetStart)){
+    if(targetStart<FIRST_WEEK)return;
+    const deletedTarget=weeks.find(w=>w.start===targetStart&&w.deleted);
+    if(deletedTarget&&n<0){alert('삭제된 주간 기록입니다. 주간 기록 목록에서 백업으로 복원할 수 있습니다.');return;}
+    if(deletedTarget&&!confirm(`${fmtDate(targetStart)} 시작 주는 삭제했던 기록입니다.\n삭제된 내용을 복원하지 않고, 현재 주 재고를 이어받아 새 주간 기록으로 다시 시작할까요?`))return;
+    if(n>0&&(!weeks.some(w=>w.start===targetStart&&!w.deleted)||!records.some(r=>r.weekly_record_id===targetStart))){
       const snapshot=weeks.find(w=>w.start===week.start)?.item_snapshot;
-      if(snapshot)setWeeks(ws=>[...ws,{id:uid(),...weekInfo(parseLocal(targetStart)),item_snapshot:snapshot.map(i=>({...i})),created_at:new Date().toISOString(),updated_at:new Date().toISOString()}]);
+      setWeeks(ws=>{
+        const revived={id:deletedTarget?.id||uid(),...weekInfo(parseLocal(targetStart)),item_snapshot:(snapshot||activeItems).map(i=>({...i})),deleted:false,created_at:deletedTarget?.created_at||new Date().toISOString(),updated_at:new Date().toISOString()};
+        return [...ws.filter(w=>w.start!==targetStart),revived];
+      });
       setRecords(prev=>{
         let next=[...prev];
         activeItems.forEach(item=>{
@@ -569,7 +575,9 @@ function App(){
         save(STORAGE.incoming,next);return next;
       });
     }
-    setDate(targetStart);
+    // React state still contains the deleted marker during this click, so bypass
+    // setDate only for the week we just revived. Otherwise it would alert and stay put.
+    if(deletedTarget)setRawDate(targetStart);else setDate(targetStart);
     const shown=parseLocal(calendarDate);shown.setDate(shown.getDate()+n*7);setCalendarDate(isoDate(shown));
   }
 }
